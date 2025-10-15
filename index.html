@@ -24,6 +24,34 @@
     .counter{display:flex;justify-content:flex-end;font-size:12px;color:#9ca3af;margin-top:4px}
     .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f1f2f;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none}
     .toast.ok{border-color:#134e4a}.toast.err{border-color:#7f1d1d}
+ <style>
+/* --- Scroll fix: New Patient フォームを確実にスクロール可能に --- */
+html, body { height: 100%; }
+body {
+  overflow-y: auto !important;           /* 全ページで縦スクロールを許可 */
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;     /* iOS の慣性スクロール */
+}
+
+/* 100vh問題を回避して、ヘッダーがあっても中身がスクロールできるように */
+main, .main, .page, .content {
+  min-height: 100dvh;                    /* 動的vhでモバイル対応 */
+  overflow-y: auto;                      /* コンテンツ側でも保険で許可 */
+}
+
+/* 新規患者ページ（クラス名不明でも効くようにフォームを直接ケア） */
+form { 
+  max-height: none;                      /* もし固定高があれば無効化 */
+}
+
+/* 万が一どこかで overflow: hidden が指定されていた場合の無効化 */
+[style*="overflow: hidden"] { overflow: auto !important; }
+
+/* ヘッダーが sticky/fixed の場合に下が隠れないよう保険 */
+header { position: sticky; top: 0; z-index: 10; }
+body { padding-top: env(safe-area-inset-top); }
+</style>
+
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
