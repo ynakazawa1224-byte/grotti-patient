@@ -18,10 +18,10 @@
     label{font-size:14px;color:#cbd5e1;display:block;margin:10px 0 6px}
     input[type="text"],input[type="date"],input[type="number"],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#09121b;color:var(--txt);font-size:16px;outline:none}
     input[readonly]{opacity:.9;background:#0c1723}
-    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .hint{font-size:12px;color:#9ca3af;margin-top:6px}
     .btn{width:100%;padding:14px;border-radius:12px;border:1px solid transparent;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(90deg,#a78bfa,#60a5fa);color:#0b1020}
     .error{border-color:var(--err)!important}
-    .counter{display:flex;justify-content:flex-end;font-size:12px;color:var(--muted);margin-top:4px}
+    .counter{display:flex;justify-content:flex-end;font-size:12px;color:#9ca3af;margin-top:4px}
     .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f1f2f;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:none}
     .toast.ok{border-color:#134e4a}.toast.err{border-color:#7f1d1d}
   </style>
@@ -32,8 +32,8 @@
   <main>
     <section class="chips">
       <span id="chk-lib" class="chip ok">ライブラリ：OK</span>
-      <span id="chk-url" class="chip">Project URL：https://pseoapqcylxplevuifog.supabase.co</span>
-      <span id="chk-key" class="chip">Anon Key：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZW9hcHFjeWx4cGxldnVpZm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2NDQ1OTEsImV4cCI6MjA3MzIyMDU5MX0.L0ZmhpzvqNqnrqYHXFuAFc8mgk1I1F-LC1JGhI4pSTE</span>
+      <span id="chk-url" class="chip">Project URL：確認中…</span>
+      <span id="chk-key" class="chip">Anon Key：確認中…</span>
     </section>
 
     <section class="card">
@@ -70,12 +70,11 @@
 
   <script>
     // ▼▼▼ ここを実プロジェクトの値に差し替え ▼▼▼
-    const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+    const SUPABASE_URL = 'https://pseoapqcylxplevuifog.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZW9hcHFjeWx4cGxldnVpZm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2NDQ1OTEsImV4cCI6MjA3MzIyMDU5MX0.L0ZmhpzvqNqnrqYHXFuAFc8mgk1I1F-LC1JGhI4pSTE';
     // ▲▲▲ 差し替えはこの2行だけ ▲▲▲
 
     const { createClient } = window.supabase || {};
-    const chipLib = document.getElementById('chk-lib');
     const chipUrl = document.getElementById('chk-url');
     const chipKey = document.getElementById('chk-key');
 
@@ -84,12 +83,7 @@
       /^https:/.test(SUPABASE_URL || '') &&
       (SUPABASE_ANON_KEY || '').length > 40;
 
-    if (!createClient) {
-      chipLib.textContent = 'ライブラリ：ERROR';
-    } else if (!hasKeys) {
-      chipUrl.textContent = 'Project URL：未設定';
-      chipKey.textContent = 'Anon Key：未設定';
-    } else {
+    if (hasKeys && createClient) {
       try {
         supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
         chipUrl.textContent = 'Project URL：OK'; chipUrl.classList.add('ok');
@@ -99,6 +93,9 @@
         chipKey.textContent = 'Anon Key：ERROR';
         console.error(e);
       }
+    } else {
+      chipUrl.textContent = 'Project URL：未設定';
+      chipKey.textContent = 'Anon Key：未設定';
     }
 
     const el = {
@@ -117,14 +114,8 @@
     const qp = k => new URLSearchParams(location.search).get(k);
     const in0100 = v => (v === '' || v === null) ? true : (Number(v) >= 0 && Number(v) <= 100 && Number.isFinite(Number(v)));
     const mark = (input, bad) => input.classList.toggle('error', !!bad);
-    const toast = (msg, ok=true) => {
-      el.toast.textContent = msg;
-      el.toast.className = 'toast ' + (ok ? 'ok' : 'err');
-      el.toast.style.display = 'block';
-      setTimeout(()=> el.toast.style.display='none', 2200);
-    };
+    const toast = (msg, ok=true) => { el.toast.textContent = msg; el.toast.className = 'toast ' + (ok ? 'ok' : 'err'); el.toast.style.display = 'block'; setTimeout(()=> el.toast.style.display='none', 2200); };
 
-    // 初期表示
     (function init(){
       el.pid.value = qp('patient_id') || qp('pid') || '';
       el.date.value = todayStr();
@@ -144,7 +135,6 @@
       vcheck();
     })();
 
-    // 保存
     el.save.addEventListener('click', async ()=>{
       if(!supabase){ toast('初期化に失敗しました', false); return; }
       const payload = {
