@@ -68,11 +68,11 @@ body { padding-top: env(safe-area-inset-top); }
       <h2>入力</h2>
 
       <label>患者ID（例：P001）</label>
-      <input id="patientId" type="text" readonly />
+      <input id="pid" name="pid" type="text" placeholder="例：P001">
       <div class="hint">URLの <code>?patient_id=XXXX</code> または <code>?pid=XXXX</code> で自動入力されます。</div>
 
       <label>日付</label>
-      <input id="date" type="date" />
+      <input id="date" name="date" type="date">
       <div class="hint">未選択なら今日の日付を自動セットします。</div>
 
       <label>24時間後（24h）</label>
@@ -144,24 +144,26 @@ body { padding-top: env(safe-area-inset-top); }
     const mark = (input, bad) => input.classList.toggle('error', !!bad);
     const toast = (msg, ok=true) => { el.toast.textContent = msg; el.toast.className = 'toast ' + (ok ? 'ok' : 'err'); el.toast.style.display = 'block'; setTimeout(()=> el.toast.style.display='none', 2200); };
 
-    (function init(){
-      el.pid.value = qp('patient_id') || qp('pid') || '';
-      el.date.value = todayStr();
-      const updateCount = () => el.memoCount.textContent = String(el.memo.value.length);
-      el.memo.addEventListener('input', updateCount); updateCount();
+    (function initForm() {
+  const el = {
+    pid:  document.getElementById('pid'),
+    date: document.getElementById('date'),
+  };
 
-      const vcheck = () => {
-        const a = in0100(el.n24.value), b = in0100(el.n48.value);
-        mark(el.n24, !a); mark(el.n48, !b);
-        el.save.disabled = !(el.pid.value) || !a || !b;
-      };
-      ['input','change','blur'].forEach(e=>{
-        el.n24.addEventListener(e, vcheck);
-        el.n48.addEventListener(e, vcheck);
-        el.date.addEventListener(e, vcheck);
-      });
-      vcheck();
-    })();
+  // URLパラメータ ?patient_id=XXXX を拾って入力（ロックはしない）
+  const params = new URLSearchParams(location.search);
+  const qPid = params.get('patient_id') || params.get('pid');
+  if (qPid && !el.pid.value) el.pid.value = qPid;
+
+  // 日付は未入力なら今日を自動セット（YYYY-MM-DD）
+  if (!el.date.value) {
+    const t = new Date();
+    const yyyy = t.getFullYear();
+    const mm = String(t.getMonth() + 1).padStart(2, '0');
+    const dd = String(t.getDate()).padStart(2, '0');
+    el.date.value = `${yyyy}-${mm}-${dd}`;
+  }
+})();
 
     el.save.addEventListener('click', async ()=>{
       if(!supabase){ toast('初期化に失敗しました', false); return; }
