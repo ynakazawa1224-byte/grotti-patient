@@ -1,6 +1,23 @@
 <!doctype html>
 <html lang="ja">
 <head>
+  <!-- URLパラメータを localStorage / sessionStorage に保存 -->
+<script>
+(function () {
+  try {
+    const sp = new URLSearchParams(location.search);
+    const u  = sp.get("u");   // Supabase URL
+    const k  = sp.get("k");   // Supabase Anon Key
+    const id = sp.get("id");  // 患者ID
+    if (u && k) {
+      localStorage.setItem("SUPABASE_URL", decodeURIComponent(u));
+      localStorage.setItem("SUPABASE_ANON_KEY", decodeURIComponent(k));
+    }
+    if (id) sessionStorage.setItem("INITIAL_PATIENT_ID", id);
+  } catch(e){ console.error(e); }
+})();
+</script>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>患者用 入力フォーム（NRS 24h / 48h）</title>
@@ -95,7 +112,7 @@
     .footer-note{ color:var(--muted); font-size:12px; margin-top:12px; }
   </style>
 </head>
-<body>
+  <body>
   <div class="wrap">
     <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
 
@@ -304,5 +321,23 @@
     loadSettings();
     initSupabase();
   </script>
+    <!-- フォーム描画後に患者IDを自動セット -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  try {
+    const candidates = [
+      '#patient_id',
+      'input[name="patient_id"]',
+      'input#patientId',
+      'input[name="id"]'
+    ];
+    let el = null;
+    for (const sel of candidates) { el = document.querySelector(sel); if (el) break; }
+    const v = sessionStorage.getItem("INITIAL_PATIENT_ID");
+    if (el && v && !el.value) el.value = v;
+  } catch(e){}
+});
+</script>
+
 </body>
 </html>
