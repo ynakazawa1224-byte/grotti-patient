@@ -1,343 +1,74 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <!-- URLパラメータを localStorage / sessionStorage に保存 -->
-<script>
-(function () {
-  try {
-    const sp = new URLSearchParams(location.search);
-    const u  = sp.get("u");   // Supabase URL
-    const k  = sp.get("k");   // Supabase Anon Key
-    const id = sp.get("id");  // 患者ID
-    if (u && k) {
-      localStorage.setItem("SUPABASE_URL", decodeURIComponent(u));
-      localStorage.setItem("SUPABASE_ANON_KEY", decodeURIComponent(k));
-    }
-    if (id) sessionStorage.setItem("INITIAL_PATIENT_ID", id);
-  } catch(e){ console.error(e); }
-})();
-</script>
-
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>患者用 入力フォーム（NRS 24h / 48h）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>患者用入力フォーム（NRS 24h / 48h）</title>
+
+  <!-- ★ Supabase 設定（必須）：ここを書き換えてください -->
+  <meta name="supabase-url" content="https://pseoapqcylxplevuifog.supabase.co">
+  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZW9hcHFjeWx4cGxldnVpZm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2NDQ1OTEsImV4cCI6MjA3MzIyMDU5MX0.L0ZmhpzvqNqnrqYHXFuAFc8mgk1I1F-LC1JGhI4pSTE">
+
+  <!-- デザイン最小 -->
   <style>
-    :root {
-      --bg:#0f172a;      /* 背景 (slate-900) */
-      --panel:#111827;   /* パネル (gray-900) */
-      --muted:#94a3b8;   /* 補助文字 (slate-400) */
-      --text:#e5e7eb;    /* 文字 (gray-200) */
-      --accent:#3b82f6;  /* ボタンなど (blue-500) */
-      --accent-2:#60a5fa;/* ボタンhover (blue-400) */
-      --danger:#ef4444;  /* エラー (red-500) */
-      --ok:#22c55e;      /* OK (green-500) */
-      --chip:#1f2937;    /* チップ背景 (gray-800) */
-    }
-    html,body{
-      margin:0; padding:0;
-      background:var(--bg); color:var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, "Apple Color Emoji", "Segoe UI Emoji";
-      min-height:100%;
-    }
-    .wrap{
-      max-width:720px; margin:0 auto; padding:24px 16px 120px;
-    }
-    h1{ font-size:20px; margin:0 0 16px; }
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-    .chip{
-      display:inline-flex; align-items:center; gap:8px;
-      background:var(--chip); color:var(--text);
-      border:1px solid #243045; border-radius:999px;
-      padding:6px 12px; font-size:12px;
-    }
-    .chip .dot{ width:8px; height:8px; border-radius:50%; background:var(--muted); }
-    .chip.ok .dot{ background:var(--ok); }
-    .chip.warn .dot{ background:var(--danger); }
-
-    .card{
-      background:var(--panel);
-      border:1px solid #1f2937;
-      border-radius:16px;
-      padding:20px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.25);
-    }
-    label{ display:block; font-size:12px; color:var(--muted); margin:14px 0 6px; }
-    input[type="text"], input[type="date"], input[type="number"], textarea{
-      width:100%; box-sizing:border-box;
-      padding:12px 14px; border-radius:10px; border:1px solid #263245;
-      background:#0b1222; color:var(--text);
-      font-size:16px; outline:none;
-    }
-    input[readonly]{ opacity:.9; }
-    textarea{ min-height:120px; resize:vertical; }
-
-    .row{ display:grid; grid-template-columns:1fr; gap:14px; }
-    @media (min-width:620px){
-      .row.two{ grid-template-columns:1fr 1fr; }
-    }
-
-    .btn{
-      width:100%; padding:14px 16px; font-weight:700;
-      border-radius:12px; border:1px solid transparent;
-      background:var(--accent); color:white; font-size:16px;
-      cursor:pointer; margin-top:20px;
-    }
-    .btn:hover{ background:var(--accent-2); }
-    .btn:disabled{ opacity:.6; cursor:not-allowed; }
-
-    /* 右下の設定ボタン */
-    .fab{
-      position:fixed; right:16px; bottom:16px;
-      width:44px; height:44px; border-radius:50%;
-      display:grid; place-items:center;
-      background:#101826; border:1px solid #223149;
-      color:var(--text); cursor:pointer;
-    }
-    .fab:hover{ border-color:#33507c; }
-
-    /* モーダル */
-    .modal{ position:fixed; inset:0; display:none; place-items:center; }
-    .modal.open{ display:grid; }
-    .backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.6); }
-    .sheet{
-      position:relative; z-index:1;
-      width:min(92vw,560px); background:var(--panel);
-      border:1px solid #1f2937; border-radius:16px; padding:18px;
-    }
-    .sheet h2{ margin:0 0 12px; font-size:16px; }
-    .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-    .btn-sec{ padding:10px 14px; border-radius:10px; background:#0b1222; border:1px solid #283349; color:var(--text); cursor:pointer; }
-    .btn-pri{ padding:10px 14px; border-radius:10px; background:var(--accent); color:#fff; border:1px solid transparent; cursor:pointer; }
-    .hint{ color:var(--muted); font-size:12px; }
-    .footer-note{ color:var(--muted); font-size:12px; margin-top:12px; }
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background:#0e1420; color:#e5e7eb; }
+    .wrap { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    .card { background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; }
+    .row { margin: 12px 0; }
+    label { display:block; margin-bottom:6px; color:#93a3b8; font-size:13px; }
+    input, textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #334155; background:#0b1322; color:#e5e7eb; }
+    textarea { height: 100px; resize: vertical; }
+    .btn { display:inline-block; padding:10px 16px; border-radius:10px; border:1px solid #2563eb; background:#2563eb; color:#fff; cursor:pointer; font-weight:600; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .muted { color:#94a3b8; font-size:12px; }
+    .ok { color:#34d399; }
+    .err { color:#f87171; }
+    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .pill { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid #334155; }
+    .pill.red { color:#f87171; border-color:#f87171; }
+    .pill.green { color:#34d399; border-color:#34d399; }
   </style>
+
+  <!-- supabase-js（v2 CDN） -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
-  <body>
+<body>
   <div class="wrap">
+    <div class="toolbar">
+      <span class="pill" id="libState">ライブラリ：確認中</span>
+      <span class="pill" id="urlState">Project URL：確認中</span>
+      <span class="pill" id="keyState">Anon Key：確認中</span>
+      <span class="muted" id="patientIdView"></span>
+    </div>
+
     <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
 
-    <!-- ステータス表示 -->
-    <div class="chips">
-      <div id="libChip" class="chip"><span class="dot"></span>ライブラリ：<strong>読み込み中…</strong></div>
-      <div id="urlChip" class="chip warn"><span class="dot"></span>Project URL：<strong>未設定</strong></div>
-      <div id="keyChip" class="chip warn"><span class="dot"></span>Anon Key：<strong>未設定</strong></div>
-    </div>
-
-    <!-- 入力カード -->
-    <form class="card" id="form">
-      <div class="row two">
-        <div>
-          <label>患者ID（必須）</label>
-          <input id="pid" type="text" placeholder="例：P001" autocomplete="off">
-        </div>
-        <div>
-          <label>測定日（未入力なら本日）</label>
-          <input id="date" type="date" inputmode="none">
-        </div>
+    <div class="card">
+      <div class="row">
+        <label>24時間後の痛み（0〜10）</label>
+        <input id="nrs24" type="number" inputmode="numeric" min="0" max="10" placeholder="例: 3" />
       </div>
-
-      <div class="row two">
-        <div>
-          <label>NRS（24h後）</label>
-          <input id="n24" type="number" inputmode="numeric" placeholder="0〜100の整数" min="0" max="100" step="1">
-        </div>
-        <div>
-          <label>NRS（48h後）</label>
-          <input id="n48" type="number" inputmode="numeric" placeholder="0〜100の整数" min="0" max="100" step="1">
-        </div>
+      <div class="row">
+        <label>48時間後の痛み（0〜10）</label>
+        <input id="nrs48" type="number" inputmode="numeric" min="0" max="10" placeholder="例: 2" />
       </div>
-
-      <div>
-        <label>メモ（任意）</label>
-        <textarea id="memo" placeholder="自由記入"></textarea>
+      <div class="row">
+        <label>コメント（任意）</label>
+        <textarea id="memo" placeholder="メモがあればご入力ください"></textarea>
       </div>
-
-      <button id="save" class="btn" type="submit">保存する</button>
-      <div class="footer-note">※ 保存後、ブラウザを閉じていただいて問題ありません。</div>
-    </form>
-  </div>
-
-  <!-- 設定ボタン -->
-  <button class="fab" id="openSettings" title="設定">⚙️</button>
-
-  <!-- 設定モーダル -->
-  <div class="modal" id="settingsModal" aria-hidden="true">
-    <div class="backdrop"></div>
-    <div class="sheet">
-      <h2>Supabase 設定</h2>
-      <label>Project URL</label>
-      <input id="sb_url" type="text" placeholder="https://xxxx.supabase.co">
-      <label>Anon Key</label>
-      <textarea id="sb_key" placeholder="長いキー文字列"></textarea>
-      <div class="actions">
-        <button class="btn-sec" id="cancelSettings">キャンセル</button>
-        <button class="btn-pri" id="saveSettings">保存</button>
+      <div class="row">
+        <button class="btn" id="saveBtn">保存する</button>
+        <span id="saveMsg" class="muted" style="margin-left:12px;"></span>
       </div>
-      <p class="hint">※ 入力内容はこの端末の <code>localStorage</code> に保存されます。</p>
+      <div class="row">
+        <span class="muted">このフォームで入力いただいた内容は、院の管理アプリに反映されます。</span>
+      </div>
     </div>
   </div>
 
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    /***** DOM 参照 *****/
-    const el = {
-      pid:  document.getElementById('pid'),
-      date: document.getElementById('date'),
-      n24:  document.getElementById('n24'),
-      n48:  document.getElementById('n48'),
-      memo: document.getElementById('memo'),
-      save: document.getElementById('save'),
-      form: document.getElementById('form'),
-      libChip: document.getElementById('libChip'),
-      urlChip: document.getElementById('urlChip'),
-      keyChip: document.getElementById('keyChip'),
-      settingsModal: document.getElementById('settingsModal'),
-      openSettings: document.getElementById('openSettings'),
-      cancelSettings: document.getElementById('cancelSettings'),
-      saveSettings: document.getElementById('saveSettings'),
-      sb_url: document.getElementById('sb_url'),
-      sb_key: document.getElementById('sb_key'),
-    };
-
-    /*** 状態 ***/
-    let supabaseClient = null;
-
-    function setChip(chipEl, ok, label){
-      chipEl.classList.toggle('ok', ok);
-      chipEl.classList.toggle('warn', !ok);
-      chipEl.querySelector('strong').textContent = label;
-      chipEl.querySelector('.dot').style.background = ok ? 'var(--ok)' : 'var(--danger)';
-    }
-
-    /*** 設定のロード/保存 ***/
-    const LS_URL_KEY = 'sb_url';
-    const LS_ANON_KEY = 'sb_anon_key';
-
-    function loadSettings(){
-      const url = localStorage.getItem(LS_URL_KEY) || '';
-      const key = localStorage.getItem(LS_ANON_KEY) || '';
-      el.sb_url.value = url;
-      el.sb_key.value = key;
-      setChip(el.urlChip, !!url, url ? '設定済み' : '未設定');
-      setChip(el.keyChip, !!key, key ? '設定済み' : '未設定');
-      return {url, key};
-    }
-
-    function saveSettings(){
-      const url = (el.sb_url.value || '').trim();
-      const key = (el.sb_key.value || '').trim();
-      localStorage.setItem(LS_URL_KEY, url);
-      localStorage.setItem(LS_ANON_KEY, key);
-      loadSettings();
-      initSupabase();
-    }
-
-    /*** Supabase 初期化 ***/
-    function initSupabase(){
-      const {url, key} = loadSettings();
-      if (url && key && window.supabase){
-        supabaseClient = window.supabase.createClient(url, key);
-        setChip(el.libChip, true, 'OK');
-      } else {
-        supabaseClient = null;
-        setChip(el.libChip, false, window.supabase ? '未初期化' : '読み込み失敗');
-      }
-    }
-
-    /*** モーダル操作 ***/
-    function openModal(){ el.settingsModal.classList.add('open'); el.settingsModal.setAttribute('aria-hidden','false'); }
-    function closeModal(){ el.settingsModal.classList.remove('open'); el.settingsModal.setAttribute('aria-hidden','true'); }
-
-    el.openSettings.addEventListener('click', () => { loadSettings(); openModal(); });
-    el.cancelSettings.addEventListener('click', closeModal);
-    el.settingsModal.querySelector('.backdrop').addEventListener('click', closeModal);
-    el.saveSettings.addEventListener('click', () => { saveSettings(); closeModal(); });
-
-    /*** URLクエリから患者ID自動入力 ***/
-    (function presetFromQuery(){
-      const q = new URLSearchParams(location.search);
-      const pid = q.get('patient_id') || q.get('pid') || '';
-      if (pid){
-        el.pid.value = pid;
-        el.pid.readOnly = true;
-      }
-    })();
-
-    /*** 日付の初期値を「今日」に（YYYY-MM-DD） ***/
-    (function presetToday(){
-      const today = new Date().toISOString().slice(0,10);
-      el.date.value = today;
-    })();
-
-    /*** 送信（INSERT） ***/
-    el.form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-
-      if (!supabaseClient){
-        alert('保存に失敗しました。設定（Project URL / Anon Key）が未設定です。右下の「設定」から入力してください。');
-        return;
-      }
-
-      const patient_id = (el.pid.value || '').trim();
-      if (!patient_id){ alert('患者IDは必須です。'); return; }
-
-      const date = (el.date.value || '').trim() || new Date().toISOString().slice(0,10);
-
-      // 数値は空なら null、値があれば Number に
-      const nrs_24h = (el.n24.value || '') === '' ? null : Number(el.n24.value);
-      const nrs_48h = (el.n48.value || '') === '' ? null : Number(el.n48.value);
-      if (nrs_24h !== null && Number.isNaN(nrs_24h)){ alert('NRS（24h後）は数値で入力してください。'); return; }
-      if (nrs_48h !== null && Number.isNaN(nrs_48h)){ alert('NRS（48h後）は数値で入力してください。'); return; }
-
-      const memo = (el.memo.value || '').trim() || null;
-
-      const payload = { patient_id, date, nrs_24h, nrs_48h, memo };
-
-      el.save.disabled = true;
-      try{
-        const { error } = await supabaseClient.from('patient_nrs').insert([payload]);
-        if (error){
-          console.error('[insert error]', error);
-          alert(`保存に失敗しました。通信環境や入力内容をご確認のうえ、もう一度お試しください。\n${error.message || ''}${error.details ? `\n${error.details}` : ''}`);
-          return;
-        }
-        alert('保存しました。ご協力ありがとうございます。');
-
-        // 数値とメモのみクリア（IDと日付は残す）
-        el.n24.value = '';
-        el.n48.value = '';
-        el.memo.value = '';
-      }catch(e){
-        console.error('[exception]', e);
-        alert('保存に失敗しました。通信環境や入力内容をご確認のうえ、もう一度お試しください。');
-      }finally{
-        el.save.disabled = false;
-      }
-    });
-
-    // 初期化
-    loadSettings();
-    initSupabase();
-  </script>
-    <!-- フォーム描画後に患者IDを自動セット -->
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  try {
-    const candidates = [
-      '#patient_id',
-      'input[name="patient_id"]',
-      'input#patientId',
-      'input[name="id"]'
-    ];
-    let el = null;
-    for (const sel of candidates) { el = document.querySelector(sel); if (el) break; }
-    const v = sessionStorage.getItem("INITIAL_PATIENT_ID");
-    if (el && v && !el.value) el.value = v;
-  } catch(e){}
-});
-</script>
-
+  <!-- アプリ本体 -->
+  <script src="./app.js"></script>
 </body>
 </html>
