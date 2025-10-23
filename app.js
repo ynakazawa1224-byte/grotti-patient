@@ -9,6 +9,21 @@
     return { url: "", key: "", source: "missing" };
   }
 
+  // 日本時間の今日(YYYY-MM-DD)
+  function todayJstYmd() {
+    const now = new Date();
+    const jst = new Date(now.getTime() - now.getTimezoneOffset() * 60000); // ローカル→UTC補正を戻してISO
+    return jst.toISOString().slice(0, 10);
+  }
+
+  // 0〜10の整数ならその値、違えば null
+  function toNrsOrNull(v) {
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return null;
+    if (n < 0 || n > 10) return null;
+    return n;
+  }
+
   const elLib = document.getElementById("libState");
   const elUrl = document.getElementById("urlState");
   const elKey = document.getElementById("keyState");
@@ -29,6 +44,7 @@
   elUrl.className = "pill " + (cfg.url ? "green" : "red");
   elKey.className = "pill " + (cfg.key ? "green" : "red");
 
+  // 患者ID（?id=XXXX）
   const id = new URLSearchParams(location.search).get("id") || "";
   elPid.textContent = id ? `患者ID：${id}` : "患者IDが見つかりません";
   if (!id) return stop("患者IDがURLに含まれていません。QRコード（?id=XXXX）から開いてください。");
@@ -38,22 +54,31 @@
 
   elSave.addEventListener("click", async () => {
     try {
-      elSave.disabled = true; elMsg.textContent = "";
-      const nrs24 = parseInt(el24.value, 10);
-      const nrs48 = parseInt(el48.value, 10);
-      const memo = (elMemo.value || "").trim();
-      const ok24 = Number.isFinite(nrs24) && nrs24 >= 0 && nrs24 <= 10;
-      const ok48 = Number.isFinite(nrs48) && nrs48 >= 0 && nrs48 <= 10;
-      if (!ok24 && !ok48 && !memo) throw new Error("24h / 48h のいずれか、またはコメントのいずれかは入力してください。");
+      elSave.disabled = true;
+      elMsg.textContent = "";
 
-      const { error } = await sb.from("patient_nrs").insert({
+      const nrs24 = toNrsOrNull(el24.value);
+      const nrs48 = toNrsOrNull(el48.value);
+      const memo = (elMemo.value || "").trim() || null;
+
+      if (nrs24 === null && nrs48 === null && !memo) {
+        throw new Error("24h / 48h のいずれか、またはコメントのいずれかは入力してください。");
+      }
+
+      const payload = {
         patient_id: id,
-        nrs_24h: ok24 ? nrs24 : null,
-        nrs_48h: ok48 ? nrs48 : null,
-        memo: memo || null,
-      });
+        date: todayJstYmd(),   // ★ NOT NULL の date を必ず送る（例: 2025-10-23）
+        nrs_24h: nrs24,
+        nrs_48h: nrs48,
+        memo,
+      };
+
+      const { error } = await sb.from("patient_nrs").insert(payload);
       if (error) throw error;
+
       elMsg.innerHTML = '<span class="ok">保存しました。ご協力ありがとうございます。</span>';
+      // 必要なら入力初期化
+      // el24.value = ""; el48.value = ""; elMemo.value = "";
     } catch (e) {
       console.error(e);
       elMsg.innerHTML = `<span class="err">${escapeHtml(e.message || String(e))}</span>`;
