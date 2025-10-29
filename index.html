@@ -1,150 +1,93 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>患者用入力フォーム（NRS 24h / 48h）</title>
-
-<!-- PWA -->
-<link rel="manifest" href="./manifest.json" />
-<meta name="theme-color" content="#0f172a" />
-<link rel="apple-touch-icon" href="./icon-192.png" />
-<script>
-  // Service Worker 登録
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
-  }
-</script>
-
-<style>
-  :root { --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --brand:#3b82f6; --ok:#22c55e; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif; }
-  .wrap { max-width: 680px; margin: 0 auto; padding: 16px; min-height: 100dvh; display:grid; gap:16px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
-  h1 { margin:0 0 8px; font-size:20px; }
-  label { display:block; margin:10px 0 6px; color:var(--muted); font-size:12px; }
-  input, textarea { width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:var(--ink); outline:none; }
-  textarea { min-height: 120px; }
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border-radius:10px; background:var(--brand); color:#fff; border:1px solid var(--brand); font-weight:700; cursor:pointer; }
-  .btn.secondary { background:transparent; color:var(--ink); border:1px solid var(--line); }
-  .row { display:flex; gap:12px; flex-wrap:wrap; }
-  .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); font-size:12px; color:#bbf7d0; background:rgba(34,197,94,.10); }
-  .hint { color:var(--muted); font-size:12px; }
-  .banner { position:sticky; bottom:12px; display:grid; gap:8px; padding:12px; border-radius:12px; border:1px dashed var(--line); background:#0b1220; }
-  .tabs { position: sticky; bottom:0; background: rgba(11,18,32,.85); border:1px solid var(--line); border-radius:12px; display:flex; justify-content:space-around; padding:10px; backdrop-filter: blur(6px); }
-  .tabs a { text-decoration:none; color:var(--muted); font-weight:700; }
-  .tabs a.active { color:#e5e7eb; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>患者用入力フォーム（NRS 24h / 48h）</title>
+  <link rel="manifest" href="./manifest.json" />
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --brand:#2563eb; --ok:#16a34a; --warn:#f59e0b;
+      --ring:rgba(59,130,246,.35);
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;line-height:1.5}
+    .wrap{max-width:720px;margin:48px auto;padding:0 16px}
+    h1{font-size:24px;margin:0 0 20px}
+    .card{background:var(--panel);border-radius:16px;padding:18px 18px 8px;border:1px solid rgba(148,163,184,.15);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+    .row{margin:12px 0}
+    label{display:block;color:var(--muted);font-size:14px;margin:0 0 6px}
+    input,textarea{width:100%;background:#0f172a;border:1px solid rgba(148,163,184,.18);color:var(--text);border-radius:12px;padding:12px 14px;outline:none}
+    input:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--ring)}
+    textarea{min-height:140px;resize:vertical}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:var(--brand);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;background:rgba(148,163,184,.12);color:var(--text);border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:4px 10px;font-size:12px}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#e5e7eb;border:1px solid rgba(148,163,184,.2);padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(8px);transition:all .25s}
+    .toast.show{opacity:1;transform:translateY(0)}
+    /* bottom nav */
+    .tabs{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(11,18,32,0),var(--bg) 22%);}
+    .tabs-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:rgba(17,24,39,.9);backdrop-filter:saturate(140%) blur(8px);border:1px solid rgba(148,163,184,.15);border-radius:18px;margin:10px;padding:6px}
+    .tab{padding:12px 8px;text-align:center;border-radius:12px;color:var(--muted);font-weight:600}
+    .tab.active{background:rgba(37,99,235,.12);color:#cfe1ff;border:1px solid rgba(37,99,235,.35)}
+    /* ID 未設定バー */
+    .idbar{position:sticky;top:0;z-index:5;background:#0b1220d9;backdrop-filter:blur(6px);border-bottom:1px solid rgba(148,163,184,.18);padding:10px 12px;display:none}
+    .idbar-inner{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:center}
+    .idbar input{flex:1}
+    .link{color:#93c5fd;text-decoration:underline;cursor:pointer}
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="row" style="justify-content:space-between; align-items:center;">
-      <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
-      <span id="status" class="pill" style="display:none;">設定OK</span>
+  <!-- 患者ID未設定ガイド（未設定時のみ表示） -->
+  <div id="idbar" class="idbar">
+    <div class="idbar-inner">
+      <span class="pill" style="background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.35);color:#fde68a">ID未設定</span>
+      <input id="idInput" placeholder="患者IDを入力（例: P0123）" />
+      <button id="idSaveBtn" class="btn" style="background:#16a34a">保存</button>
+      <span class="link" id="idHelp">QRで開く方法</span>
     </div>
-
-    <div class="card">
-      <div class="hint">患者ID：<span id="pidLabel">（未設定）</span></div>
-      <label>24時間後の痛み（0〜10）</label>
-      <input id="nrs24" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5" />
-      <label>48時間後の痛み（0〜10）</label>
-      <input id="nrs48" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 4" />
-      <label>コメント（任意）</label>
-      <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
-      <div class="row">
-        <button class="btn" id="saveBtn">保存する</button>
-        <span id="msg" class="hint"></span>
-      </div>
-    </div>
-
-    <!-- “見失わない”ための保存バナー -->
-    <div id="keepBanner" class="banner" style="display:none;">
-      <div class="hint">次回のために保存しておくと便利です。</div>
-      <div class="row">
-        <button class="btn secondary" id="btnInstall" style="display:none;">ホーム画面に追加</button>
-        <button class="btn secondary" id="btnShare">自分に送る（共有）</button>
-        <button class="btn secondary" id="btnSaveId">この端末に患者IDを保存</button>
-      </div>
-      <div class="hint">※「患者IDを保存」を押すと、次回は自動でIDを復元します。</div>
-    </div>
-
-    <!-- 擬似タブ（見た目だけ、将来拡張用） -->
-    <nav class="tabs">
-      <a class="active">入力</a>
-      <a href="#" onclick="alert('予約は後日追加予定です');return false;">予約</a>
-      <a href="#" onclick="alert('相談（チャット）は後日追加予定です');return false;">相談</a>
-      <a href="#" onclick="alert('プロフィールは後日追加予定です');return false;">プロフィール</a>
-    </nav>
   </div>
 
-<script>
-  // --- 患者IDの取得：URL ?id= または localStorage から
-  const url = new URL(location.href);
-  const idFromUrl = url.searchParams.get("id") || "";
-  const LS_ID_KEY = "grotti_patient_id";
-  let patientId = idFromUrl || localStorage.getItem(LS_ID_KEY) || "";
-  const pidLabel = document.getElementById("pidLabel");
-  pidLabel.textContent = patientId || "（未設定）";
+  <div class="wrap">
+    <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
 
-  // Supabase設定が head の data-* で埋め込まれている想定（無ければローカル入力 UI を出すなど）
-  const sbUrl = document.documentElement.dataset.projectUrl || localStorage.getItem("SUPABASE_URL") || "";
-  const sbKey = document.documentElement.dataset.anonKey || localStorage.getItem("SUPABASE_ANON_KEY") || "";
-  if (sbUrl && sbKey && patientId) document.getElementById("status").style.display = "inline-block";
+    <div class="card">
+      <div class="row">
+        <label>患者ID： <span id="pidView" class="pill">（未設定）</span></label>
+      </div>
+      <div class="row">
+        <label>24時間後の痛み（0〜10）</label>
+        <input id="nrs24" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5" />
+      </div>
+      <div class="row">
+        <label>48時間後の痛み（0〜10）</label>
+        <input id="nrs48" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 4" />
+      </div>
+      <div class="row">
+        <label>コメント（任意）</label>
+        <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
+      </div>
+      <div class="row">
+        <button id="saveBtn" class="btn">保存する</button>
+        <span class="muted" style="margin-left:10px">保存後は院側アプリに反映されます。</span>
+      </div>
+    </div>
 
-  // 保存
-  document.getElementById("saveBtn").onclick = async () => {
-    const n24 = Number(document.getElementById("nrs24").value || "");
-    const n48 = Number(document.getElementById("nrs48").value || "");
-    const memo = document.getElementById("memo").value || "";
+    <div style="height:80px"></div>
+  </div>
 
-    if (!patientId) { alert("患者IDが不明です。QRからアクセスしてください。"); return; }
-    if (Number.isNaN(n24) && Number.isNaN(n48) && !memo) { alert("いずれかを入力してください。"); return; }
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab active">入力</div>
+      <div class="tab">予約</div>
+      <div class="tab">相談</div>
+      <div class="tab">プロフィール</div>
+    </div>
+  </div>
 
-    try {
-      // ここで Supabase に INSERT（既存の実装をそのまま呼び出すでもOK）
-      // 例）fetch で既存のエンドポイントにPOST 等。ダミー成功扱いにしています。
-      await new Promise(r => setTimeout(r, 400));
-      document.getElementById("msg").textContent = "保存しました。ご協力ありがとうございます。";
-      // 初回アクセスでURLに id がある時は、ID のローカル保存を促す
-      document.getElementById("keepBanner").style.display = "grid";
-    } catch (e) {
-      alert("保存に失敗しました：" + (e.message || e));
-    }
-  };
+  <div id="toast" class="toast">保存しました。</div>
 
-  // “自分に送る（共有）”
-  document.getElementById("btnShare").onclick = async () => {
-    const shareUrl = location.href.includes("?id=") ? location.href : (location.origin + location.pathname + "?id=" + (patientId || ""));
-    const text = `NRS入力用リンク（患者ID: ${patientId}）\n${shareUrl}`;
-    if (navigator.share) {
-      try { await navigator.share({ title: "NRS入力フォーム", text, url: shareUrl }); } catch {}
-    } else {
-      await navigator.clipboard.writeText(text);
-      alert("リンクをコピーしました。LINEやメールに貼り付けてください。");
-    }
-  };
-
-  // ホーム画面に追加（PWAインストール）
-  let deferredPrompt = null;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault(); deferredPrompt = e;
-    document.getElementById("btnInstall").style.display = "inline-flex";
-  });
-  document.getElementById("btnInstall").onclick = async () => {
-    if (!deferredPrompt) { alert("この端末ではホーム画面に追加できません。"); return; }
-    deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null;
-    alert("ホーム画面に追加されました。");
-  };
-
-  // 患者IDを端末に保存
-  document.getElementById("btnSaveId").onclick = () => {
-    if (!patientId) { const t = prompt("患者IDを入力してください"); if (t) patientId = t; }
-    if (patientId) { localStorage.setItem(LS_ID_KEY, patientId); pidLabel.textContent = patientId; alert("この端末に患者IDを保存しました。"); }
-  };
-
-  // 初回アクセスで id が来たら、端末に控える提案を出す
-  if (idFromUrl) document.getElementById("keepBanner").style.display = "grid";
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
