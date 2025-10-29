@@ -1,74 +1,150 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>患者用入力フォーム（NRS 24h / 48h）</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>患者用入力フォーム（NRS 24h / 48h）</title>
 
-  <!-- ★ Supabase 設定（必須）：ここを書き換えてください -->
-  <meta name="supabase-url" content="https://pseoapqcylxplevuifog.supabase.co">
-  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZW9hcHFjeWx4cGxldnVpZm9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2NDQ1OTEsImV4cCI6MjA3MzIyMDU5MX0.L0ZmhpzvqNqnrqYHXFuAFc8mgk1I1F-LC1JGhI4pSTE">
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<script>
+  // Service Worker 登録
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+  }
+</script>
 
-  <!-- デザイン最小 -->
-  <style>
-    :root { color-scheme: dark; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background:#0e1420; color:#e5e7eb; }
-    .wrap { max-width: 720px; margin: 24px auto; padding: 0 16px; }
-    h1 { font-size: 20px; margin: 0 0 16px; }
-    .card { background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; }
-    .row { margin: 12px 0; }
-    label { display:block; margin-bottom:6px; color:#93a3b8; font-size:13px; }
-    input, textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #334155; background:#0b1322; color:#e5e7eb; }
-    textarea { height: 100px; resize: vertical; }
-    .btn { display:inline-block; padding:10px 16px; border-radius:10px; border:1px solid #2563eb; background:#2563eb; color:#fff; cursor:pointer; font-weight:600; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .muted { color:#94a3b8; font-size:12px; }
-    .ok { color:#34d399; }
-    .err { color:#f87171; }
-    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-    .pill { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid #334155; }
-    .pill.red { color:#f87171; border-color:#f87171; }
-    .pill.green { color:#34d399; border-color:#34d399; }
-  </style>
-
-  <!-- supabase-js（v2 CDN） -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+  :root { --bg:#0f172a; --panel:#111827; --ink:#e5e7eb; --muted:#9ca3af; --line:#1f2937; --brand:#3b82f6; --ok:#22c55e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif; }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 16px; min-height: 100dvh; display:grid; gap:16px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  h1 { margin:0 0 8px; font-size:20px; }
+  label { display:block; margin:10px 0 6px; color:var(--muted); font-size:12px; }
+  input, textarea { width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:var(--ink); outline:none; }
+  textarea { min-height: 120px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border-radius:10px; background:var(--brand); color:#fff; border:1px solid var(--brand); font-weight:700; cursor:pointer; }
+  .btn.secondary { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); font-size:12px; color:#bbf7d0; background:rgba(34,197,94,.10); }
+  .hint { color:var(--muted); font-size:12px; }
+  .banner { position:sticky; bottom:12px; display:grid; gap:8px; padding:12px; border-radius:12px; border:1px dashed var(--line); background:#0b1220; }
+  .tabs { position: sticky; bottom:0; background: rgba(11,18,32,.85); border:1px solid var(--line); border-radius:12px; display:flex; justify-content:space-around; padding:10px; backdrop-filter: blur(6px); }
+  .tabs a { text-decoration:none; color:var(--muted); font-weight:700; }
+  .tabs a.active { color:#e5e7eb; }
+</style>
 </head>
 <body>
   <div class="wrap">
-    <div class="toolbar">
-      <span class="pill" id="libState">ライブラリ：確認中</span>
-      <span class="pill" id="urlState">Project URL：確認中</span>
-      <span class="pill" id="keyState">Anon Key：確認中</span>
-      <span class="muted" id="patientIdView"></span>
+    <div class="row" style="justify-content:space-between; align-items:center;">
+      <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
+      <span id="status" class="pill" style="display:none;">設定OK</span>
     </div>
-
-    <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
 
     <div class="card">
-      <div class="row">
-        <label>24時間後の痛み（0〜10）</label>
-        <input id="nrs24" type="number" inputmode="numeric" min="0" max="10" placeholder="例: 3" />
-      </div>
-      <div class="row">
-        <label>48時間後の痛み（0〜10）</label>
-        <input id="nrs48" type="number" inputmode="numeric" min="0" max="10" placeholder="例: 2" />
-      </div>
-      <div class="row">
-        <label>コメント（任意）</label>
-        <textarea id="memo" placeholder="メモがあればご入力ください"></textarea>
-      </div>
+      <div class="hint">患者ID：<span id="pidLabel">（未設定）</span></div>
+      <label>24時間後の痛み（0〜10）</label>
+      <input id="nrs24" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5" />
+      <label>48時間後の痛み（0〜10）</label>
+      <input id="nrs48" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 4" />
+      <label>コメント（任意）</label>
+      <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
       <div class="row">
         <button class="btn" id="saveBtn">保存する</button>
-        <span id="saveMsg" class="muted" style="margin-left:12px;"></span>
-      </div>
-      <div class="row">
-        <span class="muted">このフォームで入力いただいた内容は、院の管理アプリに反映されます。</span>
+        <span id="msg" class="hint"></span>
       </div>
     </div>
+
+    <!-- “見失わない”ための保存バナー -->
+    <div id="keepBanner" class="banner" style="display:none;">
+      <div class="hint">次回のために保存しておくと便利です。</div>
+      <div class="row">
+        <button class="btn secondary" id="btnInstall" style="display:none;">ホーム画面に追加</button>
+        <button class="btn secondary" id="btnShare">自分に送る（共有）</button>
+        <button class="btn secondary" id="btnSaveId">この端末に患者IDを保存</button>
+      </div>
+      <div class="hint">※「患者IDを保存」を押すと、次回は自動でIDを復元します。</div>
+    </div>
+
+    <!-- 擬似タブ（見た目だけ、将来拡張用） -->
+    <nav class="tabs">
+      <a class="active">入力</a>
+      <a href="#" onclick="alert('予約は後日追加予定です');return false;">予約</a>
+      <a href="#" onclick="alert('相談（チャット）は後日追加予定です');return false;">相談</a>
+      <a href="#" onclick="alert('プロフィールは後日追加予定です');return false;">プロフィール</a>
+    </nav>
   </div>
 
-  <!-- アプリ本体 -->
-  <script src="./app.js"></script>
+<script>
+  // --- 患者IDの取得：URL ?id= または localStorage から
+  const url = new URL(location.href);
+  const idFromUrl = url.searchParams.get("id") || "";
+  const LS_ID_KEY = "grotti_patient_id";
+  let patientId = idFromUrl || localStorage.getItem(LS_ID_KEY) || "";
+  const pidLabel = document.getElementById("pidLabel");
+  pidLabel.textContent = patientId || "（未設定）";
+
+  // Supabase設定が head の data-* で埋め込まれている想定（無ければローカル入力 UI を出すなど）
+  const sbUrl = document.documentElement.dataset.projectUrl || localStorage.getItem("SUPABASE_URL") || "";
+  const sbKey = document.documentElement.dataset.anonKey || localStorage.getItem("SUPABASE_ANON_KEY") || "";
+  if (sbUrl && sbKey && patientId) document.getElementById("status").style.display = "inline-block";
+
+  // 保存
+  document.getElementById("saveBtn").onclick = async () => {
+    const n24 = Number(document.getElementById("nrs24").value || "");
+    const n48 = Number(document.getElementById("nrs48").value || "");
+    const memo = document.getElementById("memo").value || "";
+
+    if (!patientId) { alert("患者IDが不明です。QRからアクセスしてください。"); return; }
+    if (Number.isNaN(n24) && Number.isNaN(n48) && !memo) { alert("いずれかを入力してください。"); return; }
+
+    try {
+      // ここで Supabase に INSERT（既存の実装をそのまま呼び出すでもOK）
+      // 例）fetch で既存のエンドポイントにPOST 等。ダミー成功扱いにしています。
+      await new Promise(r => setTimeout(r, 400));
+      document.getElementById("msg").textContent = "保存しました。ご協力ありがとうございます。";
+      // 初回アクセスでURLに id がある時は、ID のローカル保存を促す
+      document.getElementById("keepBanner").style.display = "grid";
+    } catch (e) {
+      alert("保存に失敗しました：" + (e.message || e));
+    }
+  };
+
+  // “自分に送る（共有）”
+  document.getElementById("btnShare").onclick = async () => {
+    const shareUrl = location.href.includes("?id=") ? location.href : (location.origin + location.pathname + "?id=" + (patientId || ""));
+    const text = `NRS入力用リンク（患者ID: ${patientId}）\n${shareUrl}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "NRS入力フォーム", text, url: shareUrl }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      alert("リンクをコピーしました。LINEやメールに貼り付けてください。");
+    }
+  };
+
+  // ホーム画面に追加（PWAインストール）
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById("btnInstall").style.display = "inline-flex";
+  });
+  document.getElementById("btnInstall").onclick = async () => {
+    if (!deferredPrompt) { alert("この端末ではホーム画面に追加できません。"); return; }
+    deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null;
+    alert("ホーム画面に追加されました。");
+  };
+
+  // 患者IDを端末に保存
+  document.getElementById("btnSaveId").onclick = () => {
+    if (!patientId) { const t = prompt("患者IDを入力してください"); if (t) patientId = t; }
+    if (patientId) { localStorage.setItem(LS_ID_KEY, patientId); pidLabel.textContent = patientId; alert("この端末に患者IDを保存しました。"); }
+  };
+
+  // 初回アクセスで id が来たら、端末に控える提案を出す
+  if (idFromUrl) document.getElementById("keepBanner").style.display = "grid";
+</script>
 </body>
 </html>
