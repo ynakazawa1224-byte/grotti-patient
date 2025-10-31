@@ -1,88 +1,227 @@
-// ========== 共通UI ==========
-const $ = (s) => document.querySelector(s);
-const toast = $("#toast");
-function showToast(msg="保存しました。"){ toast.textContent=msg; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"),1600); }
+// app.js
 
-// ========== 患者IDの管理 ==========
-const LS_KEY = "gp_patient_id";
-const pidView = $("#pidView");
-const idbar = $("#idbar");
-const idInput = $("#idInput");
-const idSaveBtn = $("#idSaveBtn");
-const idHelp = $("#idHelp");
-
-function setPidDisplay(pid){
-  if(pid){
-    pidView.textContent = pid;
-    pidView.style.background="rgba(22,163,74,.15)";
-    pidView.style.borderColor="rgba(22,163,74,.35)";
-    idbar.style.display="none";
-  }else{
-    pidView.textContent="（未設定）";
-    pidView.style.background="rgba(245,158,11,.15)";
-    pidView.style.borderColor="rgba(245,158,11,.35)";
-    idbar.style.display="block";
+// ① URLの ?id=... を最初に拾って localStorage に保存しておく
+(function persistPatientIdFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const qId = params.get("id");
+  if (qId) {
+    localStorage.setItem("patientId", qId);
+    // PWAで後から開いたときにも同じIDを見せたいので、?id= を削って履歴を置き換える
+    if (window.history && window.history.replaceState) {
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
   }
-}
-function savePid(pid){ if(!pid) return; localStorage.setItem(LS_KEY,pid); setPidDisplay(pid); showToast("患者IDを保存しました（端末内）"); }
-function loadPid(){
-  const qs = new URLSearchParams(location.search);
-  const fromUrl = qs.get("id");
-  if(fromUrl && /^[A-Za-z0-9_-]+$/.test(fromUrl)){ savePid(fromUrl); return fromUrl; }
-  const saved = localStorage.getItem(LS_KEY) || "";
-  setPidDisplay(saved);
-  return saved;
-}
-let currentPid = loadPid();
+})();
 
-idSaveBtn?.addEventListener("click",()=>{
-  const v=(idInput?.value||"").trim();
-  if(!v){ showToast("IDを入力してください"); return; }
-  savePid(v); currentPid=v;
-});
-idHelp?.addEventListener("click",()=>{ alert("【IDのセット方法】\n1) 院で渡されたQRを読み取って開く\n2) 上部バーで「保存」を1回\n3) 以後はホームのアイコンから自動復元"); });
+// ② アプリの状態
+const state = {
+  tab: "input",
+  patientId: localStorage.getItem("patientId") || "",
+  supabaseUrl: localStorage.getItem("supabaseUrl") || "",
+  supabaseAnon: localStorage.getItem("supabaseAnon") || "",
+  reserveUrl: localStorage.getItem("reserveUrl") || "",
+};
 
-// ========== Supabase Client ==========
-function getSb(){
-  const h = document.documentElement || document.body.parentElement || document.head;
-  const url = (h.dataset && h.dataset.projectUrl) || "";
-  const key = (h.dataset && h.dataset.anonKey) || "";
-  if(!url || !key) throw new Error("SupabaseのURL/Keyが未設定です（index.htmlのdata属性に設定）");
-  // @supabase/supabase-js v2（CDN）
-  return window.supabase.createClient(url, key);
+function saveSettingsToLocal() {
+  localStorage.setItem("patientId", state.patientId || "");
+  localStorage.setItem("supabaseUrl", state.supabaseUrl || "");
+  localStorage.setItem("supabaseAnon", state.supabaseAnon || "");
+  localStorage.setItem("reserveUrl", state.reserveUrl || "");
 }
 
-// ========== 保存ロジック ==========
-$("#saveBtn")?.addEventListener("click", async ()=>{
-  const pid = localStorage.getItem(LS_KEY) || currentPid;
-  const n24 = parseInt($("#nrs24").value || "", 10);
-  const n48 = parseInt($("#nrs48").value || "", 10);
-  const memo = $("#memo").value || "";
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 1800);
+}
 
-  if(!pid){ showToast("患者IDが未設定です"); setPidDisplay(""); return; }
-  if(Number.isNaN(n24) || n24<0 || n24>10){ showToast("24hは0〜10で入力"); return; }
-  if(Number.isNaN(n48) || n48<0 || n48>10){ showToast("48hは0〜10で入力"); return; }
+function render() {
+  const root = document.getElementById("app");
+  const pidLabel = state.patientId ? state.patientId : "（未設定）";
 
-  try{
-    const sb = getSb();
-    const { error } = await sb.from("patient_nrs").insert({
-      patient_id: pid,
-      nrs_24h: n24,
-      nrs_48h: n48,
-      memo
-      // created_at はDBのdefault now()でOK
+  // タブ切り替え表示
+  if (state.tab === "input") {
+    root.innerHTML = `
+      <div class="card">
+        <div class="badge-inline">患者ID：${pidLabel}</div>
+        <label>24時間後の痛み（0～10）</label>
+        <input type="number" min="0" max="10" id="nrs24" placeholder="例: 5" inputmode="numeric" />
+        <div class="small-hint">※0が痛みなし、10が最大の痛み</div>
+        <label style="margin-top:12px;">48時間後の痛み（0～10）</label>
+        <input type="number" min="0" max="10" id="nrs48" placeholder="例: 4" inputmode="numeric" />
+        <label style="margin-top:12px;">コメント（任意）</label>
+        <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
+        <button id="saveBtn" class="btn-primary" style="margin-top:14px;">保存する</button>
+        <p class="small-hint" style="margin-top:10px;">保存後は院側アプリに反映されます。</p>
+      </div>
+    `;
+    document.getElementById("saveBtn").addEventListener("click", handleSaveNrs);
+  }
+
+  if (state.tab === "reserve") {
+    const hasUrl = !!state.reserveUrl;
+    root.innerHTML = `
+      <div class="card">
+        <div class="badge-inline">次回予約</div>
+        ${
+          hasUrl
+            ? `<p class="small-hint">下のボタンから予約ページを開けます。</p>
+               <button id="openReserve" class="btn-primary">予約ページを開く</button>`
+            : `<p class="small-hint">この端末には予約URLがまだ保存されていません。</p>
+               <p class="small-hint">院でQRを読み取り直すか、プロフィールで入力してください。</p>`
+        }
+      </div>
+    `;
+    const btn = document.getElementById("openReserve");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        window.open(state.reserveUrl, "_blank");
+      });
+    }
+  }
+
+  if (state.tab === "chat") {
+    root.innerHTML = `
+      <div class="card">
+        <div class="badge-inline">相談メモ（試作）</div>
+        <p class="small-hint">「前回のあとで少し戻りました」「次回こうしてほしい」などをメモできます。（今は端末内に保存）</p>
+        <textarea id="chatMemo" placeholder="相談したい内容を入力してください。"></textarea>
+        <button id="saveChat" class="btn-secondary" style="margin-top:12px;">この端末にメモする</button>
+      </div>
+    `;
+    document.getElementById("saveChat").addEventListener("click", () => {
+      const val = document.getElementById("chatMemo").value || "";
+      localStorage.setItem("chatMemo", val);
+      showToast("メモを保存しました");
     });
-    if(error) throw error;
-    showToast("保存しました。ご協力ありがとうございます。");
-    // 入力欄はそのままでもOK。クリアしたい場合は下3行を解除
-    // $("#nrs24").value = ""; $("#nrs48").value = ""; $("#memo").value = "";
-  }catch(e){
-    console.error(e);
-    showToast(`保存に失敗しました：${e.message||e}`);
+    // 以前のメモを表示
+    const old = localStorage.getItem("chatMemo");
+    if (old) {
+      document.getElementById("chatMemo").value = old;
+    }
   }
+
+  if (state.tab === "profile") {
+    root.innerHTML = `
+      <div class="card">
+        <div class="badge-inline">接続設定</div>
+        <label>Supabase URL</label>
+        <input type="url" id="profSupabaseUrl" placeholder="https://xxx.supabase.co" value="${state.supabaseUrl}" />
+        <label style="margin-top:10px;">Supabase ANON KEY</label>
+        <textarea id="profSupabaseAnon" placeholder="長いキー文字列">${state.supabaseAnon}</textarea>
+        <label style="margin-top:10px;">予約URL（任意）</label>
+        <input type="url" id="profReserveUrl" placeholder="https://line.me/R/xxxx" value="${state.reserveUrl}" />
+        <label style="margin-top:10px;">患者ID（任意）</label>
+        <input type="text" id="profPatientId" placeholder="P0001 など" value="${state.patientId}" />
+        <button id="saveProfile" class="btn-primary" style="margin-top:14px;">この端末に保存する</button>
+      </div>
+
+      <div class="card">
+        <p class="small-hint">この端末に保存されている設定</p>
+        <p class="small-hint">患者ID：${pidLabel}</p>
+        <p class="small-hint">予約URL：${state.reserveUrl ? state.reserveUrl : "（未設定）"}</p>
+        <button id="resetProfile" class="btn-secondary" style="margin-top:10px;">この端末の設定をリセット</button>
+      </div>
+    `;
+    document.getElementById("saveProfile").addEventListener("click", () => {
+      state.supabaseUrl = document.getElementById("profSupabaseUrl").value.trim();
+      state.supabaseAnon = document.getElementById("profSupabaseAnon").value.trim();
+      state.reserveUrl = document.getElementById("profReserveUrl").value.trim();
+      state.patientId = document.getElementById("profPatientId").value.trim();
+      saveSettingsToLocal();
+      showToast("設定を保存しました");
+    });
+    document.getElementById("resetProfile").addEventListener("click", () => {
+      localStorage.removeItem("supabaseUrl");
+      localStorage.removeItem("supabaseAnon");
+      localStorage.removeItem("reserveUrl");
+      // IDは残すかどうか迷うけど、今回は残す
+      state.supabaseUrl = "";
+      state.supabaseAnon = "";
+      state.reserveUrl = "";
+      render();
+      showToast("この端末の設定を消去しました");
+    });
+  }
+
+  // ボトムタブのactive切り替え
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    if (btn.dataset.tab === state.tab) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+}
+
+// NRS保存ロジック
+async function handleSaveNrs() {
+  if (!state.supabaseUrl || !state.supabaseAnon) {
+    showToast("Supabase設定がこの端末にありません");
+    state.tab = "profile";
+    render();
+    return;
+  }
+  if (!state.patientId) {
+    showToast("患者IDが未設定です");
+    state.tab = "profile";
+    render();
+    return;
+  }
+
+  const nrs24 = parseInt(document.getElementById("nrs24").value || "0", 10) || 0;
+  const nrs48 = parseInt(document.getElementById("nrs48").value || "0", 10) || 0;
+  const memo = document.getElementById("memo").value || "";
+
+  const payload = {
+    patient_id: state.patientId,
+    date: new Date().toISOString().slice(0, 10),
+    nrs_24h: nrs24,
+    nrs_48h: nrs48,
+    memo: memo,
+  };
+
+  try {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/patient_nrs`, {
+      method: "POST",
+      headers: {
+        apikey: state.supabaseAnon,
+        Authorization: `Bearer ${state.supabaseAnon}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.warn("Supabase error", await res.text());
+      showToast("保存できませんでした");
+      return;
+    }
+
+    showToast("保存しました");
+    document.getElementById("nrs24").value = "";
+    document.getElementById("nrs48").value = "";
+    document.getElementById("memo").value = "";
+  } catch (err) {
+    console.error(err);
+    showToast("通信エラーです");
+  }
+}
+
+// 画面起動時
+render();
+
+// タブのクリックハンドラ
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    state.tab = btn.dataset.tab;
+    render();
+  });
 });
 
-// ========== PWA: Service Worker ==========
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+// PWA用の簡易service worker登録
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((err) => console.log(err));
+  });
 }
