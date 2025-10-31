@@ -8,7 +8,6 @@
   />
   <title>患者用入力フォーム（NRS 24h / 48h）</title>
 
-  <!-- PWA -->
   <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#0f172a" />
   <link rel="icon" href="./icon-192.png" />
@@ -225,9 +224,26 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = "grotti_patient_settings_v2";
+    // 新旧キー
+    const STORAGE_KEY_NEW = "grotti_patient_settings_v2";
+    const STORAGE_KEY_OLD = "grotti_patient_settings";
 
-    // URLパラメータから設定を拾う（QRから開いたとき用）
+    // 旧キーが残っていたら新キーにマイグレーション
+    function migrateIfNeeded() {
+      const newVal = localStorage.getItem(STORAGE_KEY_NEW);
+      if (newVal) return; // すでに新キーがあるなら何もしない
+
+      const oldVal = localStorage.getItem(STORAGE_KEY_OLD);
+      if (!oldVal) return; // 古いのもなければ何もしない
+
+      // 古いキーをそのまま新しいキー名で保存
+      try {
+        localStorage.setItem(STORAGE_KEY_NEW, oldVal);
+      } catch (e) {
+        console.warn("migrate failed", e);
+      }
+    }
+
     function getQueryParams() {
       const p = new URLSearchParams(window.location.search);
       return {
@@ -237,18 +253,22 @@
     }
 
     function loadSettings() {
+      // 必ず最初にmigrate
+      migrateIfNeeded();
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEY_NEW);
         if (!raw) return {};
         return JSON.parse(raw);
-      } catch (e) { return {}; }
+      } catch (e) {
+        return {};
+      }
     }
 
     function saveSettings(obj) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+      localStorage.setItem(STORAGE_KEY_NEW, JSON.stringify(obj));
     }
 
-    // QRから開いたときにURLのidとreserveを保存
+    // QRからのid/reserveを先に保存
     (function initFromUrl() {
       const { id, reserve } = getQueryParams();
       if (!id && !reserve) return;
@@ -257,14 +277,12 @@
       if (id) next.patientId = id;
       if (reserve) next.reserveUrl = reserve;
       saveSettings(next);
-
-      // URLの?を消しておく（PWAで開き直したときのため）
       if (window.history && window.history.replaceState) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     })();
 
-    // DOM取得
+    // DOM
     const tabBodies = {
       input: document.getElementById("tab-input"),
       reserve: document.getElementById("tab-reserve"),
@@ -287,7 +305,6 @@
     const consultSaveBtn = document.getElementById("save-consult");
     const consultStatus = document.getElementById("consult-status");
 
-    // プロフィール欄
     const profPid = document.getElementById("prof-pid");
     const profSbUrl = document.getElementById("prof-sb-url");
     const profSbKey = document.getElementById("prof-sb-key");
@@ -297,7 +314,6 @@
     const profResetBtn = document.getElementById("reset-settings");
     const profStatus = document.getElementById("profile-status");
 
-    // 画面に反映（←これを何度も呼べるようにする）
     function renderAll() {
       const s = loadSettings();
 
@@ -323,7 +339,7 @@
         consultStatus.textContent = "";
       }
 
-      // プロフィール（入力フォーム側にも反映）
+      // プロフィール欄
       profPid.value = s.patientId || "";
       profSbUrl.value = s.supabaseUrl || "";
       profSbKey.value = s.supabaseAnon || "";
@@ -331,10 +347,10 @@
       profStatus.textContent = "";
     }
 
-    // 起動時に必ずlocalStorageを反映（←今回の追加）
+    // 起動時に必ず反映
     renderAll();
 
-    // タブ切り替え
+    // タブ
     tabButtons.forEach(btn => {
       btn.addEventListener("click", () => {
         const target = btn.dataset.tab;
@@ -342,20 +358,18 @@
         btn.classList.add("active");
         Object.keys(tabBodies).forEach(k => tabBodies[k].classList.remove("active"));
         tabBodies[target].classList.add("active");
-
-        // プロフィールや予約を開いたときにも反映しておく
         if (target === "reserve" || target === "profile") {
           renderAll();
         }
       });
     });
 
-    // NRS保存（Supabase未設定なら警告）
+    // NRS保存
     if (saveNrsBtn) {
       saveNrsBtn.addEventListener("click", async () => {
         const s = loadSettings();
         if (!s.patientId) {
-          alert("患者IDが保存されていません。院でQRをもう一度読み込むか、プロフィールで手動入力してください。");
+          alert("患者IDが保存されていません。院でQRを読み込むか、プロフィールで手動入力してください。");
           return;
         }
         const v24 = Math.max(0, Math.min(10, Number(nrs24Input.value || 0)));
@@ -400,7 +414,7 @@
       });
     }
 
-    // 予約タブのボタン
+    // 予約タブ
     function getReserveUrl() {
       const s = loadSettings();
       return s.reserveUrl || "";
@@ -458,7 +472,7 @@
       });
     }
 
-    // プロフィール「設定を再読み込み」（←今回の追加）
+    // プロフィール「設定を再読み込み」
     if (profReloadBtn) {
       profReloadBtn.addEventListener("click", () => {
         renderAll();
@@ -470,13 +484,15 @@
     if (profResetBtn) {
       profResetBtn.addEventListener("click", () => {
         if (!confirm("この端末に保存した設定を消しますか？")) return;
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY_NEW);
+        // 古いのもあれば消す
+        localStorage.removeItem(STORAGE_KEY_OLD);
         renderAll();
         alert("リセットしました。もう一度QRを読み込んでください。");
       });
     }
 
-    // SW
+    // SW登録
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js").catch(() => {});
