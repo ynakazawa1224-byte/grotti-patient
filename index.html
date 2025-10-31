@@ -190,7 +190,7 @@
       </div>
     </div>
 
-    <!-- プロフィール（←ここを編集できるようにした） -->
+    <!-- プロフィール -->
     <div id="tab-profile" class="tab-body">
       <div class="card">
         <h2 style="margin-top:0;margin-bottom:10px;">この端末の設定</h2>
@@ -209,6 +209,7 @@
         <input id="prof-reserve" type="url" placeholder="https://line.me/R/ti/p/@xxxxx" />
 
         <button id="save-profile" class="btn-primary" style="margin-top:14px;">この端末に保存する</button>
+        <button id="reload-profile" class="btn-secondary" style="margin-top:10px;">設定を再読み込み</button>
         <button id="reset-settings" class="btn-secondary" style="margin-top:10px;">この端末の設定をリセット</button>
 
         <p class="small-hint" id="profile-status" style="margin-top:10px;"></p>
@@ -226,6 +227,7 @@
   <script>
     const STORAGE_KEY = "grotti_patient_settings_v2";
 
+    // URLパラメータから設定を拾う（QRから開いたとき用）
     function getQueryParams() {
       const p = new URLSearchParams(window.location.search);
       return {
@@ -233,6 +235,7 @@
         reserve: p.get("reserve"),
       };
     }
+
     function loadSettings() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -240,11 +243,12 @@
         return JSON.parse(raw);
       } catch (e) { return {}; }
     }
+
     function saveSettings(obj) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
     }
 
-    // URLから拾う（QRで開いたとき）
+    // QRから開いたときにURLのidとreserveを保存
     (function initFromUrl() {
       const { id, reserve } = getQueryParams();
       if (!id && !reserve) return;
@@ -254,7 +258,7 @@
       if (reserve) next.reserveUrl = reserve;
       saveSettings(next);
 
-      // URLをきれいにしておく（PWAで?が消えたときでも大丈夫にする）
+      // URLの?を消しておく（PWAで開き直したときのため）
       if (window.history && window.history.replaceState) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -283,19 +287,23 @@
     const consultSaveBtn = document.getElementById("save-consult");
     const consultStatus = document.getElementById("consult-status");
 
-    // プロフィール入力欄
+    // プロフィール欄
     const profPid = document.getElementById("prof-pid");
     const profSbUrl = document.getElementById("prof-sb-url");
     const profSbKey = document.getElementById("prof-sb-key");
     const profReserve = document.getElementById("prof-reserve");
     const profSaveBtn = document.getElementById("save-profile");
+    const profReloadBtn = document.getElementById("reload-profile");
     const profResetBtn = document.getElementById("reset-settings");
     const profStatus = document.getElementById("profile-status");
 
+    // 画面に反映（←これを何度も呼べるようにする）
     function renderAll() {
       const s = loadSettings();
+
       // 入力タブ
       patientIdPill.textContent = s.patientId || "（未設定）";
+
       // 予約タブ
       if (!s.reserveUrl) {
         reserveHint.textContent = "この端末にはまだ予約URLが保存されていません。院でQRを読み込むか、プロフィールで入力してください。";
@@ -306,20 +314,24 @@
         openReserveBtn.disabled = false;
         copyReserveBtn.disabled = false;
       }
-      // 相談
+
+      // 相談タブ
       if (s.consultMemo) {
         consultText.value = s.consultMemo;
         consultStatus.textContent = "前回のメモを表示しています。";
       } else {
         consultStatus.textContent = "";
       }
-      // プロフィール欄に反映
+
+      // プロフィール（入力フォーム側にも反映）
       profPid.value = s.patientId || "";
       profSbUrl.value = s.supabaseUrl || "";
       profSbKey.value = s.supabaseAnon || "";
       profReserve.value = s.reserveUrl || "";
       profStatus.textContent = "";
     }
+
+    // 起動時に必ずlocalStorageを反映（←今回の追加）
     renderAll();
 
     // タブ切り替え
@@ -330,13 +342,15 @@
         btn.classList.add("active");
         Object.keys(tabBodies).forEach(k => tabBodies[k].classList.remove("active"));
         tabBodies[target].classList.add("active");
+
+        // プロフィールや予約を開いたときにも反映しておく
         if (target === "reserve" || target === "profile") {
           renderAll();
         }
       });
     });
 
-    // NRS保存（今回はSupabase未設定なら警告）
+    // NRS保存（Supabase未設定なら警告）
     if (saveNrsBtn) {
       saveNrsBtn.addEventListener("click", async () => {
         const s = loadSettings();
@@ -344,7 +358,6 @@
           alert("患者IDが保存されていません。院でQRをもう一度読み込むか、プロフィールで手動入力してください。");
           return;
         }
-
         const v24 = Math.max(0, Math.min(10, Number(nrs24Input.value || 0)));
         const v48 = Math.max(0, Math.min(10, Number(nrs48Input.value || 0)));
         const memo = memoInput.value || "";
@@ -437,12 +450,19 @@
           supabaseUrl: profSbUrl.value.trim(),
           supabaseAnon: profSbKey.value.trim(),
           reserveUrl: profReserve.value.trim(),
-          // 相談メモは残す
           consultMemo: loadSettings().consultMemo || "",
         };
         saveSettings(next);
         renderAll();
         profStatus.textContent = "保存しました。次回からこの設定で開きます。";
+      });
+    }
+
+    // プロフィール「設定を再読み込み」（←今回の追加）
+    if (profReloadBtn) {
+      profReloadBtn.addEventListener("click", () => {
+        renderAll();
+        profStatus.textContent = "保存済みの設定を再読み込みしました。";
       });
     }
 
