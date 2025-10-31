@@ -1,404 +1,193 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <title>患者用入力フォーム（NRS 24h / 48h）</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icon-192.png" />
-    <meta name="theme-color" content="#0f172a" />
     <style>
       :root {
         --bg: #0f172a;
-        --panel: rgba(15, 23, 42, 0.35);
-        --card: rgba(15, 23, 42, 0.7);
-        --input: rgba(15, 23, 42, 0.8);
-        --line: #06c755;
-        --accent: #3b82f6;
+        --panel: #111827;
+        --panel-soft: rgba(15, 23, 42, 0.6);
+        --border: rgba(255, 255, 255, 0.08);
         --text: #e2e8f0;
-        --text-muted: #94a3b8;
+        --muted: rgba(226, 232, 240, 0.6);
+        --accent: #3b82f6;
+        --danger: #f43f5e;
+        --radius-lg: 18px;
       }
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
-        background: radial-gradient(circle at top, #18263f 0%, #0f172a 40%, #0f172a 100%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #111827, #0f172a 50%, #020617 100%);
         color: var(--text);
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
       }
+      .app-shell {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
       header {
-        padding: 1.25rem 1.5rem 0.75rem;
+        padding: 20px 16px 4px;
       }
       h1 {
-        font-size: 1.25rem;
-        margin: 0;
+        font-size: 20px;
+        margin: 0 0 10px;
         font-weight: 600;
       }
       main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-      .section {
-        padding: 0 1.5rem 1.5rem;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 0 16px 90px;
       }
       .card {
-        background: rgba(15,23,42,0.15);
-        border: 1px solid rgba(148,163,184,0.1);
-        border-radius: 1.5rem 1.5rem 1rem 1rem;
-        padding: 1.25rem 1.25rem 1rem;
-        backdrop-filter: blur(16px);
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.05);
+        border-radius: 20px;
+        padding: 16px 16px 14px;
+        margin-bottom: 14px;
+        backdrop-filter: blur(12px);
       }
       label {
         display: block;
-        font-size: 0.75rem;
-        margin-bottom: 0.4rem;
-        color: var(--text);
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .small-hint {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
       }
       input[type="number"],
       input[type="text"],
-      textarea,
-      input[type="url"] {
+      input[type="url"],
+      textarea {
         width: 100%;
-        background: rgba(15, 23, 42, 0.4);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 0.9rem;
-        padding: 0.7rem 0.9rem;
-        color: var(--text);
-        font-size: 0.85rem;
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 14px;
+        padding: 10px 12px;
+        color: #fff;
+        font-size: 14px;
+        outline: none;
+      }
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(226, 232, 240, 0.35);
       }
       textarea {
-        min-height: 110px;
+        min-height: 90px;
         resize: vertical;
       }
-      .btn {
-        background: var(--accent);
+      .btn-primary {
+        width: 100%;
+        background: linear-gradient(120deg, #3b82f6, #2563eb);
         border: none;
-        border-radius: 9999px;
-        color: #fff;
+        border-radius: 16px;
+        padding: 12px 0;
         font-weight: 600;
-        padding: 0.65rem 1.5rem;
+        color: #fff;
+        font-size: 15px;
         cursor: pointer;
-        font-size: 0.85rem;
       }
-      .btn-line {
-        background: var(--line);
+      .btn-secondary {
+        width: 100%;
+        background: rgba(15, 23, 42, 0.3);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 14px;
+        padding: 10px 0;
+        font-weight: 500;
+        color: #e2e8f0;
+        font-size: 14px;
+        cursor: pointer;
       }
-      .btn-outline {
-        background: rgba(15, 23, 42, 0.2);
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        color: var(--text);
-      }
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        background: rgba(15, 23, 42, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 9999px;
-        padding: 0.25rem 0.75rem;
-        font-size: 0.7rem;
-      }
-      .patient-id {
-        font-weight: 600;
-        color: #fff;
-      }
-      /* bottom tabs */
-      .tabs {
-        background: rgba(15, 23, 42, 0.7);
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(2, 6, 23, 0.85);
+        backdrop-filter: blur(18px);
         border-top: 1px solid rgba(148, 163, 184, 0.12);
         display: flex;
         justify-content: space-around;
-        padding: 0.5rem 0;
-        gap: 0.5rem;
+        padding: 8px 0 14px;
       }
-      .tab {
-        flex: 1;
-        text-align: center;
-        color: var(--text-muted);
-        font-size: 0.8rem;
-        padding: 0.35rem 0;
-        cursor: pointer;
+      .tab-btn {
+        background: none;
+        border: none;
+        color: rgba(226, 232, 240, 0.5);
+        font-size: 14px;
+        font-weight: 500;
       }
-      .tab.active {
+      .tab-btn.active {
         color: #fff;
-        font-weight: 600;
       }
-      .inline-hint {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        margin-top: 0.35rem;
+      .badge-inline {
+        display: inline-block;
+        background: rgba(59, 130, 246, 0.16);
+        border: 1px solid rgba(59, 130, 246, 0.38);
+        color: #eff6ff;
+        padding: 2px 10px 2px;
+        border-radius: 999px;
+        font-size: 12px;
+        margin-bottom: 8px;
       }
-      .danger {
-        color: #f43f5e;
-        font-size: 0.7rem;
-        margin-top: 0.5rem;
+      .toast {
+        position: fixed;
+        right: 16px;
+        bottom: 90px;
+        background: rgba(15, 118, 110, 0.7);
+        color: #ecfdf3;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        transform: translateY(12px);
+        transition: all 0.25s ease-out;
+        pointer-events: none;
       }
-      .success {
-        color: #22c55e;
-        font-size: 0.7rem;
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
       }
-      .hidden { display: none; }
-      .reserve-box {
-        background: rgba(15, 23, 42, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.08);
-        border-radius: 1rem;
-        padding: 1rem;
-      }
-      .reserve-url {
-        background: rgba(15, 23, 42, 0.25);
-        border: 1px solid rgba(148, 163, 184, 0.08);
-        border-radius: 0.7rem;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.7rem;
-        word-break: break-all;
-        margin-top: 0.5rem;
-      }
-      @media (min-width: 768px) {
-        body {
-          align-items: center;
-        }
+      @media (min-width: 820px) {
         main {
-          width: 480px;
-        }
-        .tabs {
-          width: 480px;
+          max-width: 520px;
+          margin: 0 auto 90px;
+          width: 100%;
         }
       }
     </style>
   </head>
   <body>
-    <header>
-      <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
-    </header>
-    <main>
-      <!-- 入力タブ -->
-      <section id="tab-input" class="section">
-        <div class="card">
-          <div class="pill" id="pid-pill">患者ID：<span class="patient-id" id="patient-id-label">（未設定）</span></div>
-          <p class="inline-hint" style="margin-top:.8rem">
-            院で配布されたQRを開いている場合は自動でIDが入ります。
-          </p>
-          <div style="margin-top:1rem">
-            <label for="nrs24">24時間後の痛み（0～10）</label>
-            <input id="nrs24" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5" />
-          </div>
-          <div style="margin-top:1rem">
-            <label for="nrs48">48時間後の痛み（0～10）</label>
-            <input id="nrs48" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 4" />
-          </div>
-          <div style="margin-top:1rem">
-            <label for="memo">コメント（任意）</label>
-            <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
-          </div>
-          <button id="save-btn" class="btn" style="margin-top:1rem">保存する</button>
-          <p class="inline-hint">保存後は院側の管理アプリに反映されます。</p>
-          <p id="save-status" class="inline-hint"></p>
-        </div>
-      </section>
+    <div class="app-shell">
+      <header>
+        <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
+      </header>
+      <main id="app"></main>
+    </div>
 
-      <!-- 予約タブ -->
-      <section id="tab-reserve" class="section hidden">
-        <div class="card">
-          <h2 style="font-size:1rem;margin-top:0;">次回予約</h2>
-          <p class="inline-hint">LINEから予約できます（院が設定している場合）。</p>
-          <div id="reserve-available" class="reserve-box hidden">
-            <button id="open-reserve" class="btn btn-line" style="width:100%;justify-content:center;display:flex;align-items:center;gap:.4rem;">
-              LINEで予約する
-            </button>
-            <div id="reserve-url-view" class="reserve-url"></div>
-          </div>
-          <div id="reserve-missing" class="reserve-box">
-            <p class="inline-hint">
-              まだ予約リンクが設定されていません。院で「予約URL」を登録するとここから開けるようになります。
-            </p>
-          </div>
-        </div>
-      </section>
+    <div class="bottom-nav">
+      <button class="tab-btn active" data-tab="input">入力</button>
+      <button class="tab-btn" data-tab="reserve">予約</button>
+      <button class="tab-btn" data-tab="chat">相談</button>
+      <button class="tab-btn" data-tab="profile">プロフィール</button>
+    </div>
 
-      <!-- 相談タブ（ダミー） -->
-      <section id="tab-chat" class="section hidden">
-        <div class="card">
-          <h2 style="font-size:1rem;margin-top:0;">相談</h2>
-          <p class="inline-hint">「前回のあと少し痛みが戻りました」などを院に伝える場所にできます。（後で機能化）</p>
-        </div>
-      </section>
+    <div id="toast" class="toast">保存しました</div>
 
-      <!-- プロフィール／履歴タブ（ローカル用） -->
-      <section id="tab-profile" class="section hidden">
-        <div class="card">
-          <h2 style="font-size:1rem;margin-top:0;">この端末に保存されている設定</h2>
-          <p class="inline-hint" id="stored-pid">患者ID：（未設定）</p>
-          <p class="inline-hint" id="stored-reserve">予約URL：（未設定）</p>
-          <button id="clear-storage" class="btn btn-outline" style="margin-top:1rem">この端末の設定をリセット</button>
-        </div>
-      </section>
-    </main>
-
-    <nav class="tabs">
-      <div class="tab active" data-tab="input">入力</div>
-      <div class="tab" data-tab="reserve">予約</div>
-      <div class="tab" data-tab="chat">相談</div>
-      <div class="tab" data-tab="profile">プロフィール</div>
-    </nav>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.1/dist/umd/supabase.js"></script>
-    <script>
-      // --- 1. Supabase設定（head埋め込み or localStorageから復元） ---
-      const ls = window.localStorage;
-      const SUPABASE_URL = ls.getItem("SUPABASE_URL") || "https://pseoapqcyxplxeuivfog.supabase.co"; // ユタカさんの環境ならこれでOK
-      const SUPABASE_ANON_KEY = ls.getItem("SUPABASE_ANON_KEY") || ""; // 未設定ならBoltからもう一度開いて保存する
-      const RESERVATION_URL = ls.getItem("RESERVATION_URL") || "";
-      // 患者IDはクエリ（?id=PX001）優先で、なければlocalStorage
-      const urlParams = new URLSearchParams(window.location.search);
-      const initialPatientId = urlParams.get("id") || ls.getItem("PATIENT_ID") || "";
-
-      const supa = SUPABASE_URL && SUPABASE_ANON_KEY
-        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        : null;
-
-      // --- 2. 画面初期表示 ---
-      const pidLabel = document.getElementById("patient-id-label");
-      const saveStatus = document.getElementById("save-status");
-      const nrs24 = document.getElementById("nrs24");
-      const nrs48 = document.getElementById("nrs48");
-      const memo = document.getElementById("memo");
-
-      function setPatientIdView(pid){
-        pidLabel.textContent = pid ? pid : "（未設定）";
-        document.getElementById("stored-pid").textContent = "患者ID：" + (pid ? pid : "（未設定）");
-      }
-
-      setPatientIdView(initialPatientId);
-
-      // 予約タブの表示制御
-      function setupReserveView(){
-        const hasReserve = !!RESERVATION_URL;
-        const boxAvail = document.getElementById("reserve-available");
-        const boxMissing = document.getElementById("reserve-missing");
-        const view = document.getElementById("reserve-url-view");
-        const storedReserve = document.getElementById("stored-reserve");
-
-        if(hasReserve){
-          boxAvail.classList.remove("hidden");
-          boxMissing.classList.add("hidden");
-          view.textContent = RESERVATION_URL;
-          storedReserve.textContent = "予約URL：" + RESERVATION_URL;
-        } else {
-          boxAvail.classList.add("hidden");
-          boxMissing.classList.remove("hidden");
-          storedReserve.textContent = "予約URL：（未設定）";
-        }
-      }
-      setupReserveView();
-
-      // --- 3. タブ切り替え ---
-      const tabs = document.querySelectorAll(".tab");
-      const sections = {
-        input: document.getElementById("tab-input"),
-        reserve: document.getElementById("tab-reserve"),
-        chat: document.getElementById("tab-chat"),
-        profile: document.getElementById("tab-profile"),
-      };
-      tabs.forEach((t)=>{
-        t.addEventListener("click", ()=>{
-          const target = t.dataset.tab;
-          tabs.forEach(tt=>tt.classList.remove("active"));
-          t.classList.add("active");
-          Object.entries(sections).forEach(([k,el])=>{
-            if(k===target) el.classList.remove("hidden"); else el.classList.add("hidden");
-          });
-        });
-      });
-
-      // --- 4. 保存ボタン ---
-      document.getElementById("save-btn").addEventListener("click", async ()=>{
-        const pid = initialPatientId;
-        if(!pid){
-          alert("患者IDがわかりません。QRをもう一度読み込むか、院で発行されたリンクから開いてください。");
-          return;
-        }
-        if(!supa){
-          alert("Supabaseの設定がこの端末で見つかりません。もう一度QRを発行した端末で読み込んでください。");
-          return;
-        }
-        // 入力値
-        const v24 = Number(nrs24.value || 0);
-        const v48 = Number(nrs48.value || 0);
-        const cmemo = memo.value || "";
-
-        // 0〜10の範囲に丸める
-        const safe24 = Math.min(Math.max(v24,0),10);
-        const safe48 = Math.min(Math.max(v48,0),10);
-
-        // 今日の日付を送る（ブラウザで日付を作って送信）
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth()+1).padStart(2,"0");
-        const dd = String(today.getDate()).padStart(2,"0");
-        const dateStr = `${yyyy}-${mm}-${dd}`;
-
-        // 保存
-        saveStatus.textContent = "送信中です…";
-        saveStatus.classList.remove("success");
-        try {
-          const { error } = await supa.from("patient_nrs").insert({
-            patient_id: pid,
-            date: dateStr,
-            nrs_24h: safe24,
-            nrs_48h: safe48,
-            memo: cmemo,
-          });
-          if(error){
-            console.log(error);
-            saveStatus.textContent = "保存できませんでした（院にお伝えください）";
-            saveStatus.classList.remove("success");
-            return;
-          }
-          // 成功時は端末にもIDを保存しておく
-          ls.setItem("PATIENT_ID", pid);
-          saveStatus.textContent = "保存しました。ご協力ありがとうございます。";
-          saveStatus.classList.add("success");
-          nrs24.value = "";
-          nrs48.value = "";
-          // memoは残してもいいけど今回はクリア
-          memo.value = "";
-        } catch(e){
-          console.log(e);
-          saveStatus.textContent = "保存できませんでした（ネット接続をご確認ください）";
-        }
-      });
-
-      // --- 5. 予約ボタンクリック（LINEに飛ばす） ---
-      const openBtn = document.getElementById("open-reserve");
-      if(openBtn){
-        openBtn.addEventListener("click", ()=>{
-          if(RESERVATION_URL){
-            window.open(RESERVATION_URL, "_blank");
-          } else {
-            alert("予約URLが設定されていません。");
-          }
-        });
-      }
-
-      // --- 6. プロフィールの「リセット」 ---
-      document.getElementById("clear-storage").addEventListener("click", ()=>{
-        if(confirm("この端末に保存されている患者IDと予約URLを消しますか？")){
-          ls.removeItem("PATIENT_ID");
-          ls.removeItem("RESERVATION_URL");
-          setPatientIdView("");
-          setupReserveView();
-          alert("リセットしました。次回はQRを再度読み込んでください。");
-        }
-      });
-
-      // --- 7. PWAサービスワーカー登録 ---
-      if("serviceWorker" in navigator){
-        navigator.serviceWorker.register("./sw.js").catch(console.error);
-      }
-    </script>
+    <script src="app.js"></script>
   </body>
 </html>
