@@ -1,193 +1,292 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <title>患者用入力フォーム（NRS 24h / 48h）</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f172a" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="icon-192.png" />
-    <style>
-      :root {
-        --bg: #0f172a;
-        --panel: #111827;
-        --panel-soft: rgba(15, 23, 42, 0.6);
-        --border: rgba(255, 255, 255, 0.08);
-        --text: #e2e8f0;
-        --muted: rgba(226, 232, 240, 0.6);
-        --accent: #3b82f6;
-        --danger: #f43f5e;
-        --radius-lg: 18px;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: radial-gradient(circle at top, #111827, #0f172a 50%, #020617 100%);
-        color: var(--text);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      .app-shell {
-        flex: 1 1 auto;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+  <title>患者用入力フォーム（NRS 24h / 48h）</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="icon" href="./icon-192.png" />
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --card-border: rgba(255, 255, 255, 0.04);
+      --line: rgba(255, 255, 255, 0.05);
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.55);
+      --accent: #2879ff;
+      --danger: #f43f5e;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+        Arial, "Noto Sans JP", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 18px 16px 4px;
+    }
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    main {
+      flex: 1 1 auto;
+      padding: 10px 16px 80px;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .card {
+      background: radial-gradient(circle at top, rgba(40, 121, 255, 0.06), rgba(15, 23, 42, 1));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 16px 16px 14px;
+      margin-bottom: 16px;
+    }
+    .badge-inline {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px 3px 10px;
+      border-radius: 999px;
+      background: rgba(40, 121, 255, 0.1);
+      color: #fff;
+      font-size: 0.73rem;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 0.78rem;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+    input[type="number"],
+    input[type="text"],
+    textarea {
+      width: 100%;
+      background: rgba(2, 6, 23, 0.35);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      border-radius: 14px;
+      padding: 11px 14px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border 0.15s ease;
+    }
+    input:focus,
+    textarea:focus {
+      border-color: rgba(40, 121, 255, 0.6);
+    }
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+    .inline-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .patient-id-pill {
+      background: rgba(148, 163, 184, 0.05);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+    }
+    .btn-primary {
+      background: #2879ff;
+      border: none;
+      border-radius: 16px;
+      color: #fff;
+      font-weight: 600;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.08s ease;
+    }
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 14px;
+      color: #fff;
+      font-weight: 500;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .small-hint {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.4;
+    }
+
+    /* bottom tab bar */
+    nav.tabbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.95));
+      border-top: 1px solid rgba(148, 163, 184, 0.07);
+      display: flex;
+      height: 58px;
+      z-index: 50;
+    }
+    .tab-btn {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 0.73rem;
+      color: rgba(255, 255, 255, 0.45);
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      color: #fff;
+      font-weight: 600;
+    }
+    .tab-body {
+      display: none;
+    }
+    .tab-body.active {
+      display: block;
+    }
+
+    @media (min-width: 820px) {
       header {
-        padding: 20px 16px 4px;
-      }
-      h1 {
-        font-size: 20px;
-        margin: 0 0 10px;
-        font-weight: 600;
+        padding-top: 28px;
       }
       main {
-        flex: 1 1 auto;
-        overflow-y: auto;
-        padding: 0 16px 90px;
+        padding-bottom: 90px;
       }
-      .card {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(148, 163, 184, 0.05);
-        border-radius: 20px;
-        padding: 16px 16px 14px;
-        margin-bottom: 14px;
-        backdrop-filter: blur(12px);
+      nav.tabbar {
+        width: 720px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 22px 22px 0 0;
       }
-      label {
-        display: block;
-        font-size: 13px;
-        margin-bottom: 6px;
-      }
-      .small-hint {
-        font-size: 11px;
-        color: var(--muted);
-        margin-top: 2px;
-      }
-      input[type="number"],
-      input[type="text"],
-      input[type="url"],
-      textarea {
-        width: 100%;
-        background: rgba(15, 23, 42, 0.35);
-        border: 1px solid rgba(148, 163, 184, 0.12);
-        border-radius: 14px;
-        padding: 10px 12px;
-        color: #fff;
-        font-size: 14px;
-        outline: none;
-      }
-      input::placeholder,
-      textarea::placeholder {
-        color: rgba(226, 232, 240, 0.35);
-      }
-      textarea {
-        min-height: 90px;
-        resize: vertical;
-      }
-      .btn-primary {
-        width: 100%;
-        background: linear-gradient(120deg, #3b82f6, #2563eb);
-        border: none;
-        border-radius: 16px;
-        padding: 12px 0;
-        font-weight: 600;
-        color: #fff;
-        font-size: 15px;
-        cursor: pointer;
-      }
-      .btn-secondary {
-        width: 100%;
-        background: rgba(15, 23, 42, 0.3);
-        border: 1px solid rgba(148, 163, 184, 0.12);
-        border-radius: 14px;
-        padding: 10px 0;
-        font-weight: 500;
-        color: #e2e8f0;
-        font-size: 14px;
-        cursor: pointer;
-      }
-      .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(2, 6, 23, 0.85);
-        backdrop-filter: blur(18px);
-        border-top: 1px solid rgba(148, 163, 184, 0.12);
-        display: flex;
-        justify-content: space-around;
-        padding: 8px 0 14px;
-      }
-      .tab-btn {
-        background: none;
-        border: none;
-        color: rgba(226, 232, 240, 0.5);
-        font-size: 14px;
-        font-weight: 500;
-      }
-      .tab-btn.active {
-        color: #fff;
-      }
-      .badge-inline {
-        display: inline-block;
-        background: rgba(59, 130, 246, 0.16);
-        border: 1px solid rgba(59, 130, 246, 0.38);
-        color: #eff6ff;
-        padding: 2px 10px 2px;
-        border-radius: 999px;
-        font-size: 12px;
-        margin-bottom: 8px;
-      }
-      .toast {
-        position: fixed;
-        right: 16px;
-        bottom: 90px;
-        background: rgba(15, 118, 110, 0.7);
-        color: #ecfdf3;
-        padding: 10px 14px;
-        border-radius: 999px;
-        font-size: 13px;
-        backdrop-filter: blur(10px);
-        opacity: 0;
-        transform: translateY(12px);
-        transition: all 0.25s ease-out;
-        pointer-events: none;
-      }
-      .toast.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      @media (min-width: 820px) {
-        main {
-          max-width: 520px;
-          margin: 0 auto 90px;
-          width: 100%;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app-shell">
-      <header>
-        <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
-      </header>
-      <main id="app"></main>
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
+  </header>
+
+  <main>
+    <!-- 入力タブ -->
+    <div id="tab-input" class="tab-body active">
+      <div class="card">
+        <div class="inline-row" style="margin-bottom: 14px;">
+          <span class="badge-inline">患者ID：</span>
+          <span id="patient-id-pill" class="patient-id-pill">（未設定）</span>
+        </div>
+
+        <label for="nrs24">24時間後の痛み（0～10）</label>
+        <input id="nrs24" type="number" min="0" max="10" placeholder="例: 5" inputmode="numeric" />
+
+        <div style="height: 10px;"></div>
+
+        <label for="nrs48">48時間後の痛み（0～10）</label>
+        <input id="nrs48" type="number" min="0" max="10" placeholder="例: 4" inputmode="numeric" />
+
+        <div style="height: 10px;"></div>
+
+        <label for="memo">コメント（任意）</label>
+        <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
+
+        <div style="margin-top: 15px;">
+          <button id="save-nrs" class="btn-primary">保存する</button>
+          <p class="small-hint" style="margin-top:8px;">
+            保存後は院側アプリに反映されます。
+          </p>
+        </div>
+      </div>
     </div>
 
-    <div class="bottom-nav">
-      <button class="tab-btn active" data-tab="input">入力</button>
-      <button class="tab-btn" data-tab="reserve">予約</button>
-      <button class="tab-btn" data-tab="chat">相談</button>
-      <button class="tab-btn" data-tab="profile">プロフィール</button>
+    <!-- 予約タブ -->
+    <div id="tab-reserve" class="tab-body" style="display:none;">
+      <div class="card">
+        <h2 style="margin-top:0;margin-bottom:10px;">次回予約</h2>
+        <p id="reserve-hint" class="small-hint">
+          この院の予約ページを開きます。
+        </p>
+        <button id="open-reserve" class="btn-primary" style="margin-top:12px;">
+          予約ページを開く
+        </button>
+        <button id="copy-reserve" class="btn-secondary" style="margin-top:10px;">
+          URLをコピー
+        </button>
+        <p class="small-hint" style="margin-top:10px;">
+          開かない場合は、コピーしたURLをSafari / Chromeに貼り付けてください。
+        </p>
+      </div>
     </div>
 
-    <div id="toast" class="toast">保存しました</div>
+    <!-- 相談タブ -->
+    <div id="tab-consult" class="tab-body" style="display:none;">
+      <div class="card">
+        <h2 style="margin-top:0;margin-bottom:10px;">院への相談メモ</h2>
+        <p class="small-hint" style="margin-bottom:10px;">
+          「前回の施術後に少し痛みが戻りました」などをメモとして残せます（現状はこの端末に保存）。
+        </p>
+        <textarea id="consult-text" placeholder="相談内容を入力してください。"></textarea>
+        <button id="save-consult" class="btn-primary" style="margin-top:12px;">
+          この端末にメモする
+        </button>
+        <p id="consult-status" class="small-hint" style="margin-top:8px;"></p>
+      </div>
+    </div>
 
-    <script src="app.js"></script>
-  </body>
+    <!-- プロフィールタブ -->
+    <div id="tab-profile" class="tab-body" style="display:none;">
+      <div class="card">
+        <h2 style="margin-top:0;margin-bottom:10px;">この端末に保存されている設定</h2>
+        <p class="small-hint">
+          ここに表示されている内容は、院でQRを読み込んだときに自動で入ります。未設定の場合は一度QRを読み込んでください。
+        </p>
+        <p style="margin-top:12px;">患者ID： <span id="profile-patient-id">（未設定）</span></p>
+        <p>予約URL： <span id="profile-reserve-url">（未設定）</span></p>
+        <button id="reset-settings" class="btn-secondary" style="margin-top:12px;">
+          この端末の設定をリセット
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- bottom tabs -->
+  <nav class="tabbar">
+    <div class="tab-btn active" data-tab="input">入力</div>
+    <div class="tab-btn" data-tab="reserve">予約</div>
+    <div class="tab-btn" data-tab="consult">相談</div>
+    <div class="tab-btn" data-tab="profile">プロフィール</div>
+  </nav>
+
+  <script src="./app.js"></script>
+</body>
 </html>
