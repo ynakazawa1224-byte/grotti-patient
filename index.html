@@ -1,503 +1,126 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-  />
-  <title>患者用入力フォーム（NRS 24h / 48h）</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>患者入力フォーム</title>
 
-  <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#0f172a" />
-  <link rel="icon" href="./icon-192.png" />
+  <!-- （任意）PWAを使っているなら残してください -->
+  <link rel="manifest" href="manifest.json" />
 
   <style>
-    :root {
-      --bg: #0f172a;
-      --card: #111827;
-      --card-border: rgba(255, 255, 255, 0.04);
-      --text: #ffffff;
-      --muted: rgba(255, 255, 255, 0.55);
-      --accent: #2879ff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,"Noto Sans JP",sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    header { padding: 18px 16px 4px; }
-    h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
-    main {
-      flex: 1 1 auto;
-      padding: 10px 16px 80px;
-      max-width: 720px;
-      width: 100%;
-      margin: 0 auto;
-    }
-    .card {
-      background: radial-gradient(circle at top, rgba(40,121,255,.06), rgba(15,23,42,1));
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 16px 16px 14px;
-      margin-bottom: 16px;
-    }
-    label {
-      display: block;
-      font-size: .78rem;
-      margin-bottom: 6px;
-      color: var(--muted);
-    }
-    input[type="number"],
-    input[type="text"],
-    input[type="url"],
-    textarea {
-      width: 100%;
-      background: rgba(2,6,23,.35);
-      border: 1px solid rgba(148,163,184,.08);
-      border-radius: 14px;
-      padding: 10px 12px;
-      color: #fff;
-      font-size: .9rem;
-      outline: none;
-    }
-    input:focus, textarea:focus { border-color: rgba(40,121,255,.6); }
-    textarea { min-height: 92px; resize: vertical; }
-    .badge-inline {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(40,121,255,.1);
-      font-size: .73rem;
-      gap: 4px;
-      margin-bottom: 10px;
-    }
-    .patient-id-pill {
-      background: rgba(148,163,184,.05);
-      border: 1px solid rgba(148,163,184,.12);
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: .78rem;
-    }
-    .btn-primary {
-      background: #2879ff;
-      border: none;
-      border-radius: 16px;
-      color: #fff;
-      font-weight: 600;
-      padding: 10px 18px;
-      font-size: .9rem;
-      cursor: pointer;
-    }
-    .btn-secondary {
-      background: rgba(15,23,42,.35);
-      border: 1px solid rgba(148,163,184,.12);
-      border-radius: 14px;
-      color: #fff;
-      font-weight: 500;
-      padding: 8px 16px;
-      font-size: .82rem;
-      cursor: pointer;
-    }
-    .small-hint { font-size: .7rem; color: rgba(255,255,255,.45); line-height: 1.4; }
-
-    nav.tabbar {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: radial-gradient(circle at top, rgba(15,23,42,.9), rgba(15,23,42,.95));
-      border-top: 1px solid rgba(148,163,184,.07);
-      display: flex; height: 58px; z-index: 50;
-    }
-    .tab-btn {
-      flex: 1 1 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 3px; font-size: .73rem;
-      color: rgba(255,255,255,.45);
-      cursor: pointer;
-    }
-    .tab-btn.active { color: #fff; font-weight: 600; }
-    .tab-body { display: none; }
-    .tab-body.active { display: block; }
-
-    @media (min-width: 820px) {
-      nav.tabbar {
-        width: 720px; left: 50%; transform: translateX(-50%);
-        border-radius: 22px 22px 0 0;
-      }
-    }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; background:#0f172a; color:#fff; margin:0; }
+    .container { max-width: 720px; margin: 0 auto; padding: 20px; }
+    .card { background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .row { display: grid; gap: 10px; }
+    label { font-size: 13px; opacity: .9; }
+    input, textarea, select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #374151; background: #0b1220; color: #fff; }
+    button { background: #06b6d4; border: 0; padding: 10px 12px; border-radius: 8px; color: #fff; cursor: pointer; }
+    button.secondary { background: #4b5563; }
+    .muted { font-size: 12px; color: #9ca3af; }
+    .tabs { display:flex; gap:12px; margin-bottom: 12px; }
+    .tab { padding:8px 12px; border-radius:9999px; border:1px solid #374151; background:#0b1220; cursor:pointer; }
+    .tab.active { background:#1f2937; }
+    .ok { color:#34d399; }
+    .ng { color:#fca5a5; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>患者用入力フォーム（NRS 24h / 48h）</h1>
-  </header>
+  <div class="container">
+    <h1 style="margin:0 0 12px;">患者入力フォーム</h1>
+    <div class="muted" id="statusLine">設定確認中…</div>
 
-  <main>
-    <!-- 入力 -->
-    <div id="tab-input" class="tab-body active">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <span class="badge-inline">患者ID：</span>
-          <span id="patient-id-pill" class="patient-id-pill">（未設定）</span>
-        </div>
+    <div class="tabs">
+      <div class="tab active" id="tabInput">入力</div>
+      <div class="tab" id="tabReserve">予約</div>
+      <div class="tab" id="tabProfile">プロフィール</div>
+    </div>
 
-        <label for="nrs24">24時間後の痛み（0～10）</label>
-        <input id="nrs24" type="number" min="0" max="10" placeholder="例: 5" inputmode="numeric" />
-
-        <div style="height:10px;"></div>
-
-        <label for="nrs48">48時間後の痛み（0～10）</label>
-        <input id="nrs48" type="number" min="0" max="10" placeholder="例: 4" inputmode="numeric" />
-
-        <div style="height:10px;"></div>
-
-        <label for="memo">コメント（任意）</label>
-        <textarea id="memo" placeholder="気になることがあればご記入ください。"></textarea>
-
-        <div style="margin-top:15px;">
-          <button id="save-nrs" class="btn-primary">保存する</button>
-          <p class="small-hint" style="margin-top:8px;">保存後は院側アプリに反映されます。</p>
-        </div>
+    <!-- 入力タブ -->
+    <div class="card" id="viewInput">
+      <div class="row">
+        <label>患者ID（読み取り専用）</label>
+        <input id="pid" readonly />
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <label>24h後 NRS（0〜10）</label>
+        <input id="nrs24" type="number" min="0" max="10" />
+      </div>
+      <div class="row">
+        <label>48h後 NRS（0〜10）</label>
+        <input id="nrs48" type="number" min="0" max="10" />
+      </div>
+      <div class="row">
+        <label>コメント（任意）</label>
+        <textarea id="memo" rows="3"></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <button id="btnSave">保存する</button>
+        <span class="muted" id="saveMsg" style="margin-left:8px;"></span>
       </div>
     </div>
 
-    <!-- 予約 -->
-    <div id="tab-reserve" class="tab-body">
-      <div class="card">
-        <h2 style="margin-top:0;margin-bottom:10px;">次回予約</h2>
-        <p id="reserve-hint" class="small-hint">この院の予約ページを開きます。</p>
-        <button id="open-reserve" class="btn-primary" style="margin-top:12px;">予約ページを開く</button>
-        <button id="copy-reserve" class="btn-secondary" style="margin-top:10px;">URLをコピー</button>
-        <p class="small-hint" style="margin-top:10px;">開かない場合は、コピーしたURLをSafari / Chromeに貼り付けてください。</p>
+    <!-- 予約タブ -->
+    <div class="card" id="viewReserve" style="display:none;">
+      <div class="row">
+        <label>予約ページ</label>
+        <button id="openReserve">予約ページを開く</button>
       </div>
+      <div class="muted" style="margin-top:8px;">※ 予約URLは院側アプリから自動連携されます。</div>
     </div>
 
-    <!-- 相談 -->
-    <div id="tab-consult" class="tab-body">
-      <div class="card">
-        <h2 style="margin-top:0;margin-bottom:10px;">院への相談メモ</h2>
-        <p class="small-hint" style="margin-bottom:10px;">この端末にだけ残るメモです。院が見る版はあとで作ります。</p>
-        <textarea id="consult-text" placeholder="相談内容を入力してください。"></textarea>
-        <button id="save-consult" class="btn-primary" style="margin-top:12px;">この端末にメモする</button>
-        <p id="consult-status" class="small-hint" style="margin-top:8px;"></p>
+    <!-- プロフィールタブ -->
+    <div class="card" id="viewProfile" style="display:none;">
+      <div class="row">
+        <label>患者ID</label>
+        <input id="profPid" />
       </div>
-    </div>
-
-    <!-- プロフィール -->
-    <div id="tab-profile" class="tab-body">
-      <div class="card">
-        <h2 style="margin-top:0;margin-bottom:10px;">この端末の設定</h2>
-        <p class="small-hint">院でQRを読み込むと自動で反映されます。うまく入らない時はここで手動入力してください。</p>
-
-        <label for="prof-pid">患者ID</label>
-        <input id="prof-pid" type="text" placeholder="例: P0022" />
-
-        <label for="prof-sb-url" style="margin-top:10px;">Supabase URL</label>
-        <input id="prof-sb-url" type="url" placeholder="https://xxxxx.supabase.co" />
-
-        <label for="prof-sb-key" style="margin-top:10px;">Supabase ANON KEY</label>
-        <textarea id="prof-sb-key" placeholder="長いキー文字列を貼り付けてください"></textarea>
-
-        <label for="prof-reserve" style="margin-top:10px;">予約URL（LINEなど）</label>
-        <input id="prof-reserve" type="url" placeholder="https://line.me/R/ti/p/@xxxxx" />
-
-        <button id="save-profile" class="btn-primary" style="margin-top:14px;">この端末に保存する</button>
-        <button id="reload-profile" class="btn-secondary" style="margin-top:10px;">設定を再読み込み</button>
-        <button id="reset-settings" class="btn-secondary" style="margin-top:10px;">この端末の設定をリセット</button>
-
-        <p class="small-hint" id="profile-status" style="margin-top:10px;"></p>
+      <div class="row">
+        <label>Supabase URL</label>
+        <input id="profSUrl" />
       </div>
+      <div class="row">
+        <label>Supabase ANON KEY</label>
+        <input id="profAKey" />
+      </div>
+      <div class="row">
+        <label>予約URL</label>
+        <input id="profRUrl" />
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button id="btnProfSave">この端末に保存</button>
+        <button id="btnReload" class="secondary">設定を再読み込み</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">※ 値が空の場合は院側のQRから読み込んでください。</div>
     </div>
-  </main>
+  </div>
 
-  <nav class="tabbar">
-    <div class="tab-btn active" data-tab="input">入力</div>
-    <div class="tab-btn" data-tab="reserve">予約</div>
-    <div class="tab-btn" data-tab="consult">相談</div>
-    <div class="tab-btn" data-tab="profile">プロフィール</div>
-  </nav>
-
+  <!-- ★★★ Safari対応：ここで“先に”クエリをlocalStorageへ保存（deferやhead内では実行しない） -->
   <script>
-    // 新旧キー
-    const STORAGE_KEY_NEW = "grotti_patient_settings_v2";
-    const STORAGE_KEY_OLD = "grotti_patient_settings";
-
-    // 旧キーが残っていたら新キーにマイグレーション
-    function migrateIfNeeded() {
-      const newVal = localStorage.getItem(STORAGE_KEY_NEW);
-      if (newVal) return; // すでに新キーがあるなら何もしない
-
-      const oldVal = localStorage.getItem(STORAGE_KEY_OLD);
-      if (!oldVal) return; // 古いのもなければ何もしない
-
-      // 古いキーをそのまま新しいキー名で保存
+    (function bootstrapFromQuery() {
       try {
-        localStorage.setItem(STORAGE_KEY_NEW, oldVal);
+        var q = new URLSearchParams(location.search);
+        var id   = q.get("id");
+        var sUrl = q.get("supabaseUrl");
+        var aKey = q.get("anonKey");
+        var rUrl = q.get("reserveUrl");
+
+        if (id)   localStorage.setItem("patientId", id);
+        if (sUrl) localStorage.setItem("supabaseUrl", sUrl);
+        if (aKey) localStorage.setItem("supabaseAnonKey", aKey);
+        if (rUrl) localStorage.setItem("reserveUrl", rUrl);
+
+        // URL掃除（履歴は汚さない）
+        if (id || sUrl || aKey || rUrl) {
+          history.replaceState(null, "", location.origin + location.pathname);
+        }
       } catch (e) {
-        console.warn("migrate failed", e);
-      }
-    }
-
-    function getQueryParams() {
-      const p = new URLSearchParams(window.location.search);
-      return {
-        id: p.get("id"),
-        reserve: p.get("reserve"),
-      };
-    }
-
-    function loadSettings() {
-      // 必ず最初にmigrate
-      migrateIfNeeded();
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY_NEW);
-        if (!raw) return {};
-        return JSON.parse(raw);
-      } catch (e) {
-        return {};
-      }
-    }
-
-    function saveSettings(obj) {
-      localStorage.setItem(STORAGE_KEY_NEW, JSON.stringify(obj));
-    }
-
-    // QRからのid/reserveを先に保存
-    (function initFromUrl() {
-      const { id, reserve } = getQueryParams();
-      if (!id && !reserve) return;
-      const cur = loadSettings();
-      const next = { ...cur };
-      if (id) next.patientId = id;
-      if (reserve) next.reserveUrl = reserve;
-      saveSettings(next);
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState({}, document.title, window.location.pathname);
+        console.warn("bootstrapFromQuery error:", e);
       }
     })();
-
-    // DOM
-    const tabBodies = {
-      input: document.getElementById("tab-input"),
-      reserve: document.getElementById("tab-reserve"),
-      consult: document.getElementById("tab-consult"),
-      profile: document.getElementById("tab-profile"),
-    };
-    const tabButtons = document.querySelectorAll(".tab-btn");
-
-    const patientIdPill = document.getElementById("patient-id-pill");
-    const nrs24Input = document.getElementById("nrs24");
-    const nrs48Input = document.getElementById("nrs48");
-    const memoInput = document.getElementById("memo");
-    const saveNrsBtn = document.getElementById("save-nrs");
-
-    const reserveHint = document.getElementById("reserve-hint");
-    const openReserveBtn = document.getElementById("open-reserve");
-    const copyReserveBtn = document.getElementById("copy-reserve");
-
-    const consultText = document.getElementById("consult-text");
-    const consultSaveBtn = document.getElementById("save-consult");
-    const consultStatus = document.getElementById("consult-status");
-
-    const profPid = document.getElementById("prof-pid");
-    const profSbUrl = document.getElementById("prof-sb-url");
-    const profSbKey = document.getElementById("prof-sb-key");
-    const profReserve = document.getElementById("prof-reserve");
-    const profSaveBtn = document.getElementById("save-profile");
-    const profReloadBtn = document.getElementById("reload-profile");
-    const profResetBtn = document.getElementById("reset-settings");
-    const profStatus = document.getElementById("profile-status");
-
-    function renderAll() {
-      const s = loadSettings();
-
-      // 入力タブ
-      patientIdPill.textContent = s.patientId || "（未設定）";
-
-      // 予約タブ
-      if (!s.reserveUrl) {
-        reserveHint.textContent = "この端末にはまだ予約URLが保存されていません。院でQRを読み込むか、プロフィールで入力してください。";
-        openReserveBtn.disabled = true;
-        copyReserveBtn.disabled = true;
-      } else {
-        reserveHint.textContent = "この院の予約ページに移動します。";
-        openReserveBtn.disabled = false;
-        copyReserveBtn.disabled = false;
-      }
-
-      // 相談タブ
-      if (s.consultMemo) {
-        consultText.value = s.consultMemo;
-        consultStatus.textContent = "前回のメモを表示しています。";
-      } else {
-        consultStatus.textContent = "";
-      }
-
-      // プロフィール欄
-      profPid.value = s.patientId || "";
-      profSbUrl.value = s.supabaseUrl || "";
-      profSbKey.value = s.supabaseAnon || "";
-      profReserve.value = s.reserveUrl || "";
-      profStatus.textContent = "";
-    }
-
-    // 起動時に必ず反映
-    renderAll();
-
-    // タブ
-    tabButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const target = btn.dataset.tab;
-        tabButtons.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        Object.keys(tabBodies).forEach(k => tabBodies[k].classList.remove("active"));
-        tabBodies[target].classList.add("active");
-        if (target === "reserve" || target === "profile") {
-          renderAll();
-        }
-      });
-    });
-
-    // NRS保存
-    if (saveNrsBtn) {
-      saveNrsBtn.addEventListener("click", async () => {
-        const s = loadSettings();
-        if (!s.patientId) {
-          alert("患者IDが保存されていません。院でQRを読み込むか、プロフィールで手動入力してください。");
-          return;
-        }
-        const v24 = Math.max(0, Math.min(10, Number(nrs24Input.value || 0)));
-        const v48 = Math.max(0, Math.min(10, Number(nrs48Input.value || 0)));
-        const memo = memoInput.value || "";
-
-        if (!s.supabaseUrl || !s.supabaseAnon) {
-          alert("Supabaseの設定がこの端末にありません。プロフィールでURLとAnonKeyを入れてください。");
-          return;
-        }
-
-        const payload = {
-          patient_id: s.patientId,
-          date: new Date().toISOString().slice(0,10),
-          nrs_24h: v24,
-          nrs_48h: v48,
-          memo: memo,
-        };
-
-        try {
-          const res = await fetch(`${s.supabaseUrl}/rest/v1/patient_nrs`, {
-            method: "POST",
-            headers: {
-              apikey: s.supabaseAnon,
-              Authorization: `Bearer ${s.supabaseAnon}`,
-              "Content-Type": "application/json",
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify(payload),
-          });
-          if (!res.ok) {
-            alert("保存できませんでした（院で設定を確認してください）");
-            return;
-          }
-          alert("保存しました。ご協力ありがとうございます。");
-          nrs24Input.value = "";
-          nrs48Input.value = "";
-          memoInput.value = "";
-        } catch (e) {
-          alert("通信エラーです");
-        }
-      });
-    }
-
-    // 予約タブ
-    function getReserveUrl() {
-      const s = loadSettings();
-      return s.reserveUrl || "";
-    }
-    if (openReserveBtn) {
-      openReserveBtn.addEventListener("click", () => {
-        const url = getReserveUrl();
-        if (!url) {
-          alert("この端末に予約URLがありません。プロフィールで入力してください。");
-          return;
-        }
-        window.location.href = url;
-      });
-    }
-    if (copyReserveBtn) {
-      copyReserveBtn.addEventListener("click", async () => {
-        const url = getReserveUrl();
-        if (!url) {
-          alert("コピーできるURLがありません。");
-          return;
-        }
-        try {
-          await navigator.clipboard.writeText(url);
-          alert("予約URLをコピーしました。開かない場合はSafari/Chromeに貼り付けてください。");
-        } catch (e) {
-          alert("コピーできませんでした。長押しでコピーしてください。");
-        }
-      });
-    }
-
-    // 相談タブ
-    if (consultSaveBtn) {
-      consultSaveBtn.addEventListener("click", () => {
-        const txt = consultText.value || "";
-        const s = loadSettings();
-        s.consultMemo = txt;
-        saveSettings(s);
-        consultStatus.textContent = "この端末に保存しました。";
-      });
-    }
-
-    // プロフィール保存
-    if (profSaveBtn) {
-      profSaveBtn.addEventListener("click", () => {
-        const next = {
-          patientId: profPid.value.trim(),
-          supabaseUrl: profSbUrl.value.trim(),
-          supabaseAnon: profSbKey.value.trim(),
-          reserveUrl: profReserve.value.trim(),
-          consultMemo: loadSettings().consultMemo || "",
-        };
-        saveSettings(next);
-        renderAll();
-        profStatus.textContent = "保存しました。次回からこの設定で開きます。";
-      });
-    }
-
-    // プロフィール「設定を再読み込み」
-    if (profReloadBtn) {
-      profReloadBtn.addEventListener("click", () => {
-        renderAll();
-        profStatus.textContent = "保存済みの設定を再読み込みしました。";
-      });
-    }
-
-    // プロフィールリセット
-    if (profResetBtn) {
-      profResetBtn.addEventListener("click", () => {
-        if (!confirm("この端末に保存した設定を消しますか？")) return;
-        localStorage.removeItem(STORAGE_KEY_NEW);
-        // 古いのもあれば消す
-        localStorage.removeItem(STORAGE_KEY_OLD);
-        renderAll();
-        alert("リセットしました。もう一度QRを読み込んでください。");
-      });
-    }
-
-    // SW登録
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
-      });
-    }
   </script>
+
+  <!-- 本体ロジック（必ず上のbootstrapを実行した後に読み込む） -->
+  <script src="./app.js"></script>
 </body>
 </html>
