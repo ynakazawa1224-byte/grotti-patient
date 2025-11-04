@@ -1,3 +1,30 @@
+// ==== QRクエリから設定を取り込み → localStorageへ保存（初回開封でも確実に反映）====
+(function bootstrapFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+
+    const id = params.get("id");
+    const supabaseUrl = params.get("supabaseUrl");
+    const anonKey = params.get("anonKey");
+    const reserveUrl = params.get("reserveUrl");
+    const formUrl = params.get("formUrl"); // 将来拡張用
+
+    if (id) localStorage.setItem("patientId", id);
+    if (supabaseUrl) localStorage.setItem("supabaseUrl", supabaseUrl);
+    if (anonKey) localStorage.setItem("supabaseAnonKey", anonKey);
+    if (reserveUrl) localStorage.setItem("reserveUrl", reserveUrl);
+    if (formUrl) localStorage.setItem("formUrl", formUrl);
+
+    // URL汚れ防止：保存後はクエリを消しておく（履歴は残さない）
+    if (id || supabaseUrl || anonKey || reserveUrl || formUrl) {
+      const clean = location.origin + location.pathname;
+      history.replaceState(null, "", clean);
+    }
+  } catch (e) {
+    console.warn("bootstrapFromQuery error:", e);
+  }
+})();
+
 // 共通で使うキー
 const STORAGE_KEY = "grotti_patient_settings";
 
