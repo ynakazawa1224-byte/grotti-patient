@@ -1,12 +1,13 @@
 {
-  "name": "GROTTI 患者アプリ",
+  "name": "GROTTI 患者入力フォーム",
   "short_name": "GROTTI患者",
-  "start_url": "/grotti-patient/?source=pwa",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "start_url": "./?v=6",
+  "scope": "./",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+  ],
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a"
 }
