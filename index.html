@@ -5,25 +5,63 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>患者入力フォーム</title>
 
-  <!-- （任意）PWAを使っているなら残してください -->
+  <!-- PWAを使っている場合はこのまま -->
   <link rel="manifest" href="manifest.json" />
 
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; background:#0f172a; color:#fff; margin:0; }
-    .container { max-width: 720px; margin: 0 auto; padding: 20px; }
-    .card { background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .row { display: grid; gap: 10px; }
-    label { font-size: 13px; opacity: .9; }
-    input, textarea, select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #374151; background: #0b1220; color: #fff; }
-    button { background: #06b6d4; border: 0; padding: 10px 12px; border-radius: 8px; color: #fff; cursor: pointer; }
-    button.secondary { background: #4b5563; }
-    .muted { font-size: 12px; color: #9ca3af; }
-    .tabs { display:flex; gap:12px; margin-bottom: 12px; }
-    .tab { padding:8px 12px; border-radius:9999px; border:1px solid #374151; background:#0b1220; cursor:pointer; }
-    .tab.active { background:#1f2937; }
-    .ok { color:#34d399; }
-    .ng { color:#fca5a5; }
+    :root{--bg:#0f172a;--panel:#111827;--line:#374151;--ink:#e5e7eb;--muted:#9ca3af;--pri:#06b6d4;}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .container{max-width:720px;margin:0 auto;padding:20px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+    .row{display:grid;gap:10px}
+    label{font-size:13px;opacity:.9}
+    input,textarea,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:#fff;outline:none}
+    button{background:var(--pri);border:0;padding:10px 12px;border-radius:10px;color:#fff;cursor:pointer}
+    button.secondary{background:#4b5563}
+    .muted{font-size:12px;color:var(--muted)}
+    .tabs{display:flex;gap:12px;margin-bottom:12px}
+    .tab{padding:8px 12px;border-radius:9999px;border:1px solid var(--line);background:#0b1220;cursor:pointer}
+    .tab.active{background:#1f2937}
+    .ok{color:#34d399}.ng{color:#fca5a5}
   </style>
+
+  <!-- ❶ Safari/A2HSでも“確実に”最初に走る：クエリ→localStorage保存（消さない） -->
+  <script>
+    (function bootstrapFromQuery() {
+      try {
+        var p = new URLSearchParams(location.search);
+        var got = false;
+
+        var id  = p.get("id");
+        var su  = p.get("supabaseUrl");
+        var ak  = p.get("anonKey");
+        var ru  = p.get("reserveUrl");
+
+        if (id) { localStorage.setItem("g2.patientId", id); got = true; }
+        if (su) { localStorage.setItem("g2.supabaseUrl", su); got = true; }
+        if (ak) { localStorage.setItem("g2.anonKey", ak);   got = true; }
+        if (ru) { localStorage.setItem("g2.reserveUrl", ru); got = true; }
+
+        // 重要：ここでURLのクエリを消さない（iOSの「ホーム追加」は現在のURLで固定されるため）
+        if (got) localStorage.setItem("g2.savedAt", String(Date.now()));
+
+        // 旧キーからの移行（互換）
+        // すでに旧キーがあれば新キーにコピーしておく（上書きはしない）
+        var legacy = [
+          ["patientId","patientId","g2.patientId"],
+          ["supabaseUrl","supabaseUrl","g2.supabaseUrl"],
+          ["supabaseAnonKey","supabaseAnonKey","g2.anonKey"],
+          ["reserveUrl","reserveUrl","g2.reserveUrl"]
+        ];
+        legacy.forEach(function([oldKey, oldLS, newLS]){
+          var v = localStorage.getItem(oldLS);
+          if (v && !localStorage.getItem(newLS)) localStorage.setItem(newLS, v);
+        });
+
+      } catch(e) { console.warn("bootstrapFromQuery error:", e); }
+    })();
+  </script>
 </head>
 <body>
   <div class="container">
@@ -36,7 +74,7 @@
       <div class="tab" id="tabProfile">プロフィール</div>
     </div>
 
-    <!-- 入力タブ -->
+    <!-- 入力 -->
     <div class="card" id="viewInput">
       <div class="row">
         <label>患者ID（読み取り専用）</label>
@@ -60,7 +98,7 @@
       </div>
     </div>
 
-    <!-- 予約タブ -->
+    <!-- 予約 -->
     <div class="card" id="viewReserve" style="display:none;">
       <div class="row">
         <label>予約ページ</label>
@@ -69,25 +107,13 @@
       <div class="muted" style="margin-top:8px;">※ 予約URLは院側アプリから自動連携されます。</div>
     </div>
 
-    <!-- プロフィールタブ -->
+    <!-- プロフィール -->
     <div class="card" id="viewProfile" style="display:none;">
-      <div class="row">
-        <label>患者ID</label>
-        <input id="profPid" />
-      </div>
-      <div class="row">
-        <label>Supabase URL</label>
-        <input id="profSUrl" />
-      </div>
-      <div class="row">
-        <label>Supabase ANON KEY</label>
-        <input id="profAKey" />
-      </div>
-      <div class="row">
-        <label>予約URL</label>
-        <input id="profRUrl" />
-      </div>
-      <div style="margin-top:12px; display:flex; gap:8px;">
+      <div class="row"><label>患者ID</label><input id="profPid" /></div>
+      <div class="row"><label>Supabase URL</label><input id="profSUrl" /></div>
+      <div class="row"><label>Supabase ANON KEY</label><input id="profAKey" /></div>
+      <div class="row"><label>予約URL</label><input id="profRUrl" /></div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
         <button id="btnProfSave">この端末に保存</button>
         <button id="btnReload" class="secondary">設定を再読み込み</button>
       </div>
@@ -95,32 +121,7 @@
     </div>
   </div>
 
-  <!-- ★★★ Safari対応：ここで“先に”クエリをlocalStorageへ保存（deferやhead内では実行しない） -->
-  <script>
-    (function bootstrapFromQuery() {
-      try {
-        var q = new URLSearchParams(location.search);
-        var id   = q.get("id");
-        var sUrl = q.get("supabaseUrl");
-        var aKey = q.get("anonKey");
-        var rUrl = q.get("reserveUrl");
-
-        if (id)   localStorage.setItem("patientId", id);
-        if (sUrl) localStorage.setItem("supabaseUrl", sUrl);
-        if (aKey) localStorage.setItem("supabaseAnonKey", aKey);
-        if (rUrl) localStorage.setItem("reserveUrl", rUrl);
-
-        // URL掃除（履歴は汚さない）
-        if (id || sUrl || aKey || rUrl) {
-          history.replaceState(null, "", location.origin + location.pathname);
-        }
-      } catch (e) {
-        console.warn("bootstrapFromQuery error:", e);
-      }
-    })();
-  </script>
-
-  <!-- 本体ロジック（必ず上のbootstrapを実行した後に読み込む） -->
+  <!-- ❷ 本体ロジック。必ず bootstrap 後に読み込む -->
   <script src="./app.js"></script>
 </body>
 </html>
