@@ -1,122 +1,158 @@
-<script>
-/** ===== 患者アプリ 初期化 & 永続化 ===== */
+/* ============ 患者ページ 初期化 v7 (ID非依存・フェイルセーフ) ============ */
 
-const LS_KEYS = {
-  patientId: 'gp.patientId',
-  supabaseUrl: 'gp.supabaseUrl',
-  anonKey:    'gp.anonKey',
-  reserveUrl: 'gp.reserveUrl',
-  savedAt:    'gp.savedAt',
+// ローカル保存キー
+const LS = {
+  pid: 'gp.patientId',
+  url: 'gp.supabaseUrl',
+  key: 'gp.anonKey',
+  rsv: 'gp.reserveUrl',
+  at : 'gp.savedAt',
 };
 
-// フォーム要素
-const $id        = document.querySelector('#patient-id');
-const $url       = document.querySelector('#supabase-url');
-const $anon      = document.querySelector('#supabase-anon');
-const $reserve   = document.querySelector('#reserve-url');
-const $saveBtn   = document.querySelector('#btn-save-local');
-const $reloadBtn = document.querySelector('#btn-reload-local');
-const $badges    = {
-  headerId:  document.querySelector('#badge-header-id'),
-  headerSb:  document.querySelector('#badge-header-sb'),
-  headerRes: document.querySelector('#badge-header-res'),
+// 要素探索（id / name / data-field / placeholder 日本語 で順に探す）
+function findInput(candidates) {
+  for (const sel of candidates) {
+    const el = document.querySelector(sel);
+    if (el) return el;
+  }
+  return null;
+}
+function byPlaceholder(texts) {
+  const all = Array.from(document.querySelectorAll('input,textarea'));
+  return all.find(el => texts.some(t => (el.placeholder || '').includes(t))) || null;
+}
+
+// セレクタ定義（複数の当たり先を用意）
+const el = {
+  mask:  document.querySelector('#boot-mask') || null,
+  id:    findInput([
+            '#patient-id','#patientId','input[name="patientId"]','input[name="id"]',
+            'input[data-field="patient-id"]'
+         ]) || byPlaceholder(['患者ID','Patient ID']),
+  url:   findInput([
+            '#supabase-url','input[name="supabaseUrl"]','input[data-field="supabase-url"]'
+         ]) || byPlaceholder(['Supabase URL','supabase']),
+  key:   findInput([
+            '#supabase-anon','input[name="anonKey"]','input[data-field="supabase-anon"]'
+         ]) || byPlaceholder(['ANON','Anon','API KEY']),
+  rsv:   findInput([
+            '#reserve-url','input[name="reserveUrl"]','input[data-field="reserve-url"]'
+         ]) || byPlaceholder(['予約URL','予約','reserve']),
+  btnSave: document.querySelector('#btn-save-local') ||
+           Array.from(document.querySelectorAll('button')).find(b => /この端末に保存/.test(b.textContent||'')) || null,
+  btnReload: document.querySelector('#btn-reload-local') ||
+             Array.from(document.querySelectorAll('button')).find(b => /再読み込み/.test(b.textContent||'')) || null,
+  badgeId:  document.querySelector('#badge-header-id')  || null,
+  badgeSb:  document.querySelector('#badge-header-sb')  || null,
+  badgeRsv: document.querySelector('#badge-header-res') || null,
 };
 
-// util
-const setReadonly = (el, ro) => { if (el) el.readOnly = !!ro; };
-const setValue    = (el, v)  => { if (el) el.value = (v ?? ''); };
-const getValue    = (el)     => (el ? el.value.trim() : '');
+const $v = (elm, val) => {
+  if (!elm) return '';
+  if (val === undefined) return (elm.value ?? '').trim();
+  elm.value = val ?? '';
+};
+const setRO = (elm, flag) => { if (elm && 'readOnly' in elm) elm.readOnly = !!flag; };
 
-// 画面ヘッダのバッジを更新
-function updateBadges() {
-  const pid = getValue($id);
-  const hasSb = getValue($url) && getValue($anon);
-  const hasRes = !!getValue($reserve);
-
-  if ($badges.headerId)  $badges.headerId.textContent  = pid || '未設定';
-  if ($badges.headerSb)  $badges.headerSb.textContent  = hasSb ? 'OK' : '未設定';
-  if ($badges.headerRes) $badges.headerRes.textContent = hasRes ? '登録済' : '未登録';
+function showMask(on){ if (el.mask) el.mask.style.display = on ? '' : 'none'; }
+function lockUI(on){
+  document.querySelectorAll('button, input, select, textarea, a').forEach(n=>{
+    if (!n) return;
+    if (n === el.btnReload || n === el.btnSave) n.disabled = !!on; else n.disabled = !!on;
+  });
+}
+function updateBadges(){
+  if (el.badgeId)  el.badgeId.textContent  = $v(el.id)  || '未設定';
+  if (el.badgeSb)  el.badgeSb.textContent  = ($v(el.url) && $v(el.key)) ? 'OK' : '未設定';
+  if (el.badgeRsv) el.badgeRsv.textContent = $v(el.rsv) ? '登録済' : '未登録';
 }
 
-// localStorage ←→ フォーム
-function loadFromLocal() {
-  const pid = localStorage.getItem(LS_KEYS.patientId) || '';
-  const sb  = localStorage.getItem(LS_KEYS.supabaseUrl) || '';
-  const ak  = localStorage.getItem(LS_KEYS.anonKey) || '';
-  const rv  = localStorage.getItem(LS_KEYS.reserveUrl) || '';
-
-  setValue($id, pid);
-  setValue($url, sb);
-  setValue($anon, ak);
-  setValue($reserve, rv);
-
-  // IDが空なら手入力を許可、入っていれば読み取り専用
-  setReadonly($id, !!pid);
+// ローカル保存/復元（要素が無い場合も例外にしない）
+function loadLocal(){
+  if (el.id)  $v(el.id,  localStorage.getItem(LS.pid) || $v(el.id));
+  if (el.url) $v(el.url, localStorage.getItem(LS.url) || $v(el.url));
+  if (el.key) $v(el.key, localStorage.getItem(LS.key) || $v(el.key));
+  if (el.rsv) $v(el.rsv, localStorage.getItem(LS.rsv) || $v(el.rsv));
+  setRO(el.id, !!(el.id && $v(el.id)));
   updateBadges();
 }
-
-function saveToLocal() {
-  localStorage.setItem(LS_KEYS.patientId,  getValue($id));
-  localStorage.setItem(LS_KEYS.supabaseUrl, getValue($url));
-  localStorage.setItem(LS_KEYS.anonKey,    getValue($anon));
-  localStorage.setItem(LS_KEYS.reserveUrl, getValue($reserve));
-  localStorage.setItem(LS_KEYS.savedAt,    String(Date.now()));
+function saveLocal(){
+  if (el.id)  localStorage.setItem(LS.pid, $v(el.id));
+  if (el.url) localStorage.setItem(LS.url, $v(el.url));
+  if (el.key) localStorage.setItem(LS.key, $v(el.key));
+  if (el.rsv) localStorage.setItem(LS.rsv, $v(el.rsv));
+  localStorage.setItem(LS.at, String(Date.now()));
   updateBadges();
-  alert('この端末に保存しました。');
+  try { alert('この端末に保存しました。'); } catch(_){}
 }
 
-function applyFromQueryOnce() {
+// クエリ適用（あればローカル保存まで行う）
+function applyFromQuery(){
   const sp = new URLSearchParams(location.search);
-  const hasAny =
-    sp.has('id') || sp.has('patientId') ||
-    sp.has('supabaseUrl') || sp.has('anonKey') || sp.has('reserveUrl');
-
-  if (!hasAny) return false;
+  const hit = ['id','patientId','supabaseUrl','anonKey','reserveUrl','reserve'].some(k => sp.has(k));
+  if (!hit) return false;
 
   const pid = sp.get('patientId') || sp.get('id') || '';
   const sb  = sp.get('supabaseUrl') || '';
   const ak  = sp.get('anonKey') || '';
   const rv  = sp.get('reserveUrl') || sp.get('reserve') || '';
 
-  if (pid) setValue($id, pid);
-  if (sb)  setValue($url, sb);
-  if (ak)  setValue($anon, ak);
-  if (rv)  setValue($reserve, rv);
+  if (el.id  && pid) $v(el.id,  pid);
+  if (el.url && sb ) $v(el.url, sb );
+  if (el.key && ak ) $v(el.key, ak );
+  if (el.rsv && rv ) $v(el.rsv, rv );
 
-  // 反映したら端末に保存しておく
-  saveToLocal();
-  // IDが入ったら以後は誤編集防止でロック
-  setReadonly($id, !!pid);
+  saveLocal();
+  setRO(el.id, !!(el.id && pid));
   updateBadges();
   return true;
 }
 
-function init() {
-  // 1) クエリがあれば画面へ反映 → 保存
-  const taken = applyFromQueryOnce();
-
-  // 2) クエリが無い（=ホームアイコン起動など）なら localStorage から復元
-  if (!taken) loadFromLocal();
-
-  // ボタン類
-  if ($saveBtn)   $saveBtn.addEventListener('click', saveToLocal);
-  if ($reloadBtn) $reloadBtn.addEventListener('click', () => {
-    loadFromLocal();
-    alert('保存済みの設定を再読み込みしました。');
-  });
-
-  // 入力変化時にバッジ更新
-  [$id, $url, $anon, $reserve].forEach(el => {
-    if (el) el.addEventListener('input', updateBadges);
-  });
-
-  // iOS PWA のキャッシュ対策：バージョン付きで1度だけ登録
-  try {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=6');
+// Service Worker を v=7 で更新（失敗しても無視）
+function updateSW(){
+  try{
+    if ('serviceWorker' in navigator){
+      navigator.serviceWorker.register('./sw.js?v=7')
+        .then(reg => { try{ reg.update && reg.update(); }catch(_){}})
+        .catch(()=>{});
     }
-  } catch (_) {}
+  }catch(_){}
 }
 
-document.addEventListener('DOMContentLoaded', init);
-</script>
+// 起動
+function boot(){
+  // 最悪でも 2.5 秒で UI を開放するセーフティ
+  const safety = setTimeout(()=>{ showMask(false); lockUI(false); }, 2500);
+
+  try{
+    showMask(true);
+    lockUI(true);
+
+    const applied = applyFromQuery();
+    if (!applied) loadLocal();
+    updateSW();
+
+  }catch(err){
+    console.error('boot error', err);
+  }finally{
+    clearTimeout(safety);
+    showMask(false);
+    lockUI(false);
+    updateBadges();
+  }
+}
+
+// イベント
+document.addEventListener('DOMContentLoaded', ()=>{
+  boot();
+
+  if (el.btnSave)   el.btnSave.addEventListener('click', saveLocal);
+  if (el.btnReload) el.btnReload.addEventListener('click', ()=>{ loadLocal(); try{ alert('保存済み設定を再読み込みしました。'); }catch(_){}});
+
+  [el.id, el.url, el.key, el.rsv].forEach(n => n && n.addEventListener('input', updateBadges));
+});
+
+// 予期せぬ例外でも UI を戻す
+window.addEventListener('error', ()=>{ showMask(false); lockUI(false); });
+window.addEventListener('unhandledrejection', ()=>{ showMask(false); lockUI(false); });
+/* ================================ ここまで ================================ */
