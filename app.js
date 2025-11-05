@@ -1,130 +1,122 @@
-// app.js（患者ページ本体：A2HSでも確実復元）
+<script>
+/** ===== 患者アプリ 初期化 & 永続化 ===== */
 
-// ---- ユーティリティ ----
-function getLS(k, d=""){ try{ return localStorage.getItem(k) || d; }catch{ return d; } }
-function setLS(k, v){ try{ localStorage.setItem(k, v); }catch{} }
+const LS_KEYS = {
+  patientId: 'gp.patientId',
+  supabaseUrl: 'gp.supabaseUrl',
+  anonKey:    'gp.anonKey',
+  reserveUrl: 'gp.reserveUrl',
+  savedAt:    'gp.savedAt',
+};
 
-function loadConfig() {
-  // 新キー優先、なければ旧キーも見る（互換）
-  const cfg = {
-    patientId:  getLS("g2.patientId")     || getLS("patientId"),
-    supabaseUrl:getLS("g2.supabaseUrl")   || getLS("supabaseUrl"),
-    anonKey:    getLS("g2.anonKey")       || getLS("supabaseAnonKey"),
-    reserveUrl: getLS("g2.reserveUrl")    || getLS("reserveUrl"),
-    savedAt:    getLS("g2.savedAt")       || ""
-  };
-  return cfg;
+// フォーム要素
+const $id        = document.querySelector('#patient-id');
+const $url       = document.querySelector('#supabase-url');
+const $anon      = document.querySelector('#supabase-anon');
+const $reserve   = document.querySelector('#reserve-url');
+const $saveBtn   = document.querySelector('#btn-save-local');
+const $reloadBtn = document.querySelector('#btn-reload-local');
+const $badges    = {
+  headerId:  document.querySelector('#badge-header-id'),
+  headerSb:  document.querySelector('#badge-header-sb'),
+  headerRes: document.querySelector('#badge-header-res'),
+};
+
+// util
+const setReadonly = (el, ro) => { if (el) el.readOnly = !!ro; };
+const setValue    = (el, v)  => { if (el) el.value = (v ?? ''); };
+const getValue    = (el)     => (el ? el.value.trim() : '');
+
+// 画面ヘッダのバッジを更新
+function updateBadges() {
+  const pid = getValue($id);
+  const hasSb = getValue($url) && getValue($anon);
+  const hasRes = !!getValue($reserve);
+
+  if ($badges.headerId)  $badges.headerId.textContent  = pid || '未設定';
+  if ($badges.headerSb)  $badges.headerSb.textContent  = hasSb ? 'OK' : '未設定';
+  if ($badges.headerRes) $badges.headerRes.textContent = hasRes ? '登録済' : '未登録';
 }
 
-function applyToUI() {
-  const s = loadConfig();
-  const ok = !!(s.supabaseUrl && s.anonKey);
+// localStorage ←→ フォーム
+function loadFromLocal() {
+  const pid = localStorage.getItem(LS_KEYS.patientId) || '';
+  const sb  = localStorage.getItem(LS_KEYS.supabaseUrl) || '';
+  const ak  = localStorage.getItem(LS_KEYS.anonKey) || '';
+  const rv  = localStorage.getItem(LS_KEYS.reserveUrl) || '';
 
-  // ステータス
-  const st = document.getElementById("statusLine");
-  st.innerHTML = `患者ID: <strong>${s.patientId || "-"}</strong> ／ Supabase: ${ ok ? '<span class="ok">設定OK</span>' : '<span class="ng">未設定</span>' } ／ 予約URL: ${ s.reserveUrl ? '<span class="ok">あり</span>' : '<span class="ng">未登録</span>' }`;
+  setValue($id, pid);
+  setValue($url, sb);
+  setValue($anon, ak);
+  setValue($reserve, rv);
 
-  // 入力タブ
-  const pidEl = document.getElementById("pid");
-  if (pidEl) pidEl.value = s.patientId || "";
-
-  // プロフィール
-  const pp = document.getElementById("profPid");
-  const ps = document.getElementById("profSUrl");
-  const pa = document.getElementById("profAKey");
-  const pr = document.getElementById("profRUrl");
-  if (pp) pp.value = s.patientId || "";
-  if (ps) ps.value = s.supabaseUrl || "";
-  if (pa) pa.value = s.anonKey || "";
-  if (pr) pr.value = s.reserveUrl || "";
+  // IDが空なら手入力を許可、入っていれば読み取り専用
+  setReadonly($id, !!pid);
+  updateBadges();
 }
 
-// ---- タブ切替 ----
-(function initTabs(){
-  const tabInput = document.getElementById('tabInput');
-  const tabReserve = document.getElementById('tabReserve');
-  const tabProfile = document.getElementById('tabProfile');
-  const vInput = document.getElementById('viewInput');
-  const vReserve = document.getElementById('viewReserve');
-  const vProfile = document.getElementById('viewProfile');
+function saveToLocal() {
+  localStorage.setItem(LS_KEYS.patientId,  getValue($id));
+  localStorage.setItem(LS_KEYS.supabaseUrl, getValue($url));
+  localStorage.setItem(LS_KEYS.anonKey,    getValue($anon));
+  localStorage.setItem(LS_KEYS.reserveUrl, getValue($reserve));
+  localStorage.setItem(LS_KEYS.savedAt,    String(Date.now()));
+  updateBadges();
+  alert('この端末に保存しました。');
+}
 
-  function activate(which){
-    [tabInput, tabReserve, tabProfile].forEach(el=>el.classList.remove('active'));
-    [vInput, vReserve, vProfile].forEach(el=>el.style.display='none');
-    if (which==='input'){tabInput.classList.add('active');vInput.style.display='block'}
-    if (which==='reserve'){tabReserve.classList.add('active');vReserve.style.display='block'}
-    if (which==='profile'){tabProfile.classList.add('active');vProfile.style.display='block'}
-  }
-  tabInput.onclick = ()=>activate('input');
-  tabReserve.onclick=()=>activate('reserve');
-  tabProfile.onclick=()=>activate('profile');
-  activate('input');
-})();
+function applyFromQueryOnce() {
+  const sp = new URLSearchParams(location.search);
+  const hasAny =
+    sp.has('id') || sp.has('patientId') ||
+    sp.has('supabaseUrl') || sp.has('anonKey') || sp.has('reserveUrl');
 
-// ---- プロフィール保存/再読込 ----
-document.getElementById('btnProfSave').onclick = function(){
-  const pid  = (document.getElementById('profPid').value||"").trim();
-  const sUrl = (document.getElementById('profSUrl').value||"").trim();
-  const aKey = (document.getElementById('profAKey').value||"").trim();
-  const rUrl = (document.getElementById('profRUrl').value||"").trim();
+  if (!hasAny) return false;
 
-  if (pid)  setLS("g2.patientId", pid);
-  if (sUrl) setLS("g2.supabaseUrl", sUrl);
-  if (aKey) setLS("g2.anonKey", aKey);
-  if (rUrl) setLS("g2.reserveUrl", rUrl);
-  setLS("g2.savedAt", String(Date.now()));
+  const pid = sp.get('patientId') || sp.get('id') || '';
+  const sb  = sp.get('supabaseUrl') || '';
+  const ak  = sp.get('anonKey') || '';
+  const rv  = sp.get('reserveUrl') || sp.get('reserve') || '';
 
-  applyToUI();
-  alert("この端末に保存しました。");
-};
+  if (pid) setValue($id, pid);
+  if (sb)  setValue($url, sb);
+  if (ak)  setValue($anon, ak);
+  if (rv)  setValue($reserve, rv);
 
-document.getElementById('btnReload').onclick = function(){
-  applyToUI();
-  alert("設定を再読み込みしました。");
-};
+  // 反映したら端末に保存しておく
+  saveToLocal();
+  // IDが入ったら以後は誤編集防止でロック
+  setReadonly($id, !!pid);
+  updateBadges();
+  return true;
+}
 
-// ---- 予約ページ ----
-document.getElementById('openReserve').onclick = function(){
-  const r = loadConfig().reserveUrl;
-  if (!r){ alert("予約URLが設定されていません。"); return; }
-  window.open(r, "_blank");
-};
+function init() {
+  // 1) クエリがあれば画面へ反映 → 保存
+  const taken = applyFromQueryOnce();
 
-// 初期反映（A2HS起動でもlocalStorageから復元）
-applyToUI();
+  // 2) クエリが無い（=ホームアイコン起動など）なら localStorage から復元
+  if (!taken) loadFromLocal();
 
-// ---- NRS保存（Supabase REST直叩き）----
-document.getElementById('btnSave').onclick = async function(){
-  const s = loadConfig();
-  if (!s.supabaseUrl || !s.anonKey){ alert("Supabaseの設定がこの端末にありません。QRから読み直すか、プロフィールで設定してください。"); return; }
-  if (!s.patientId){ alert("患者IDが未設定です。"); return; }
+  // ボタン類
+  if ($saveBtn)   $saveBtn.addEventListener('click', saveToLocal);
+  if ($reloadBtn) $reloadBtn.addEventListener('click', () => {
+    loadFromLocal();
+    alert('保存済みの設定を再読み込みしました。');
+  });
 
-  const nrs24 = document.getElementById('nrs24').value;
-  const nrs48 = document.getElementById('nrs48').value;
-  const memo  = document.getElementById('memo').value || null;
-  const to01  = (v)=> (v==="" ? null : Math.max(0, Math.min(10, Number(v))));
+  // 入力変化時にバッジ更新
+  [$id, $url, $anon, $reserve].forEach(el => {
+    if (el) el.addEventListener('input', updateBadges);
+  });
 
-  const payload = { patient_id: s.patientId, nrs_24h: to01(nrs24), nrs_48h: to01(nrs48), memo };
-  const url = s.supabaseUrl.replace(/\/+$/,"") + "/rest/v1/patient_nrs";
-
-  try{
-    const res = await fetch(url, {
-      method:"POST",
-      headers:{
-        apikey: s.anonKey,
-        Authorization: "Bearer " + s.anonKey,
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok){
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status}: ${t}`);
+  // iOS PWA のキャッシュ対策：バージョン付きで1度だけ登録
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js?v=6');
     }
-    document.getElementById('saveMsg').textContent = "✔ 保存しました。ご協力ありがとうございます。";
-    setTimeout(()=>{ document.getElementById('saveMsg').textContent = ""; }, 3000);
-  }catch(e){
-    alert("保存できませんでした: " + e.message);
-  }
-};
+  } catch (_) {}
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
