@@ -1,11 +1,18 @@
-/* assets/boot.js */
+/* assets/boot.js - v3 (#pid優先) */
 (function(){
-  // 1) URLパラメータを読む
   const sp = new URLSearchParams(location.search);
   const boot = sp.get('boot');
-  const id   = sp.get('id') || '';
+  const id   = (sp.get('id') || '').trim();
 
-  // 2) boot=1 のとき、Supabase設定を localStorage(v3) に保存（旧キーにもミラー）
+  function setStatus(msg, ok){
+    const el = document.getElementById('boot-status');
+    if (el) {
+      el.textContent = msg;
+      el.style.color = ok ? '#065' : '#933';
+    }
+  }
+
+  // boot=1 のとき設定を v3 へ保存（旧キーにもミラー）
   if (boot === '1') {
     const payload = {
       supabaseUrl: (sp.get('supabaseUrl') || '').trim(),
@@ -23,17 +30,29 @@
     } catch(e){ console.warn('[boot] save failed', e); }
   }
 
-  // 3) 患者IDをフォームに自動反映（id="patient-id" の input を想定）
   window.addEventListener('DOMContentLoaded', () => {
-    const input = document.querySelector('#patient-id');
-    if (input && id) {
-      input.value = id;
-      // 変更可能にしたいなら下をfalseに
-      input.readOnly = true;
+    // ★ 優先順：#pid → #patient-id → #profPid → input[name="patient_id"]
+    const targets = [
+      document.querySelector('#pid'),
+      document.querySelector('#patient-id'),
+      document.querySelector('#profPid'),
+      document.querySelector('input[name="patient_id"]'),
+    ].filter(Boolean);
+
+    if (targets.length && id) {
+      targets.forEach(inp => {
+        try { inp.value = id; } catch(_) {}
+        try { inp.readOnly = true; } catch(_) {}
+      });
     }
 
-    // 4) 「設定確認中…」表示を消す（id="boot-status" を想定）
-    const s = document.querySelector('#boot-status');
-    if (s) s.textContent = '設定読み込み完了';
+    // ステータス表示の更新
+    const raw = localStorage.getItem('grotti_settings_v3');
+    const cfg = raw ? JSON.parse(raw) : null;
+    if (cfg?.supabaseUrl && cfg?.anonKey) {
+      setStatus('設定読み込み完了（v3）', true);
+    } else {
+      setStatus('設定が読み込めませんでした', false);
+    }
   });
 })();
