@@ -2,127 +2,163 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>患者入力フォーム</title>
-
-  <!-- PWAを使っている場合はこのまま -->
-  <link rel="manifest" href="manifest.json" />
-
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" sizes="192x192" href="./icon-192.png" />
+  <link rel="icon" sizes="512x512" href="./icon-512.png" />
   <style>
-    :root{--bg:#0f172a;--panel:#111827;--line:#374151;--ink:#e5e7eb;--muted:#9ca3af;--pri:#06b6d4;}
-    *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .container{max-width:720px;margin:0 auto;padding:20px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-    .row{display:grid;gap:10px}
-    label{font-size:13px;opacity:.9}
-    input,textarea,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:#fff;outline:none}
-    button{background:var(--pri);border:0;padding:10px 12px;border-radius:10px;color:#fff;cursor:pointer}
-    button.secondary{background:#4b5563}
-    .muted{font-size:12px;color:var(--muted)}
-    .tabs{display:flex;gap:12px;margin-bottom:12px}
-    .tab{padding:8px 12px;border-radius:9999px;border:1px solid var(--line);background:#0b1220;cursor:pointer}
-    .tab.active{background:#1f2937}
-    .ok{color:#34d399}.ng{color:#fca5a5}
+    :root{
+      --bg:#0b1020; --card:#111a33; --text:#e6f0ff; --muted:#9fb3d9;
+      --accent:#00c2ff; --ok:#0b8f6a; --err:#c0392b;
+      --bd:rgba(255,255,255,0.08);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", "Meiryo", sans-serif;
+      line-height:1.65;
+    }
+    .wrap{ max-width:880px; margin:0 auto; padding:24px 16px 64px; }
+    h1{ margin:0 0 8px; font-size:26px; font-weight:800; }
+    .tabs{ display:flex; gap:8px; margin:8px 0 16px; }
+    .tabs button{
+      appearance:none; border:1px solid var(--bd); background:#0f1b36; color:var(--text);
+      padding:7px 12px; border-radius:10px; cursor:pointer; font-weight:700;
+    }
+    .tabs button.active{ background:var(--accent); color:#002b3a; border-color:transparent; }
+    .status{
+      font-size:12px; color:#cfe0ff; margin:8px 0 16px;
+    }
+    .card{
+      background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:16px; margin-bottom:16px;
+    }
+    .row{ display:flex; align-items:center; gap:12px; margin:10px 0; }
+    label{ width:180px; color:var(--muted); font-size:14px; }
+    input, textarea{
+      width:100%; background:#0d1730; color:var(--text); border:1px solid var(--bd);
+      border-radius:10px; padding:10px 12px; font-size:14px;
+    }
+    textarea{ min-height:120px; resize:vertical; }
+    .btn{
+      appearance:none; border:1px solid var(--bd); background:#0f1b36; color:var(--text);
+      padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700;
+    }
+    .btn.primary{ background:var(--accent); color:#002b3a; border-color:transparent; }
+    .muted{ color:var(--muted); font-size:12px; }
   </style>
-
-  <!-- ❶ Safari/A2HSでも“確実に”最初に走る：クエリ→localStorage保存（消さない） -->
-  <script>
-    (function bootstrapFromQuery() {
-      try {
-        var p = new URLSearchParams(location.search);
-        var got = false;
-
-        var id  = p.get("id");
-        var su  = p.get("supabaseUrl");
-        var ak  = p.get("anonKey");
-        var ru  = p.get("reserveUrl");
-
-        if (id) { localStorage.setItem("g2.patientId", id); got = true; }
-        if (su) { localStorage.setItem("g2.supabaseUrl", su); got = true; }
-        if (ak) { localStorage.setItem("g2.anonKey", ak);   got = true; }
-        if (ru) { localStorage.setItem("g2.reserveUrl", ru); got = true; }
-
-        // 重要：ここでURLのクエリを消さない（iOSの「ホーム追加」は現在のURLで固定されるため）
-        if (got) localStorage.setItem("g2.savedAt", String(Date.now()));
-
-        // 旧キーからの移行（互換）
-        // すでに旧キーがあれば新キーにコピーしておく（上書きはしない）
-        var legacy = [
-          ["patientId","patientId","g2.patientId"],
-          ["supabaseUrl","supabaseUrl","g2.supabaseUrl"],
-          ["supabaseAnonKey","supabaseAnonKey","g2.anonKey"],
-          ["reserveUrl","reserveUrl","g2.reserveUrl"]
-        ];
-        legacy.forEach(function([oldKey, oldLS, newLS]){
-          var v = localStorage.getItem(oldLS);
-          if (v && !localStorage.getItem(newLS)) localStorage.setItem(newLS, v);
-        });
-
-      } catch(e) { console.warn("bootstrapFromQuery error:", e); }
-    })();
-  </script>
 </head>
 <body>
-  <div class="container">
-    <h1 style="margin:0 0 12px;">患者入力フォーム</h1>
-    <div class="muted" id="statusLine">設定確認中…</div>
+  <div class="wrap">
+    <h1>患者入力フォーム</h1>
 
+    <!-- ブート状態表示（boot.js で書き換え） -->
+    <div id="boot-status" class="status">設定確認中…</div>
+
+    <!-- タブ -->
     <div class="tabs">
-      <div class="tab active" id="tabInput">入力</div>
-      <div class="tab" id="tabReserve">予約</div>
-      <div class="tab" id="tabProfile">プロフィール</div>
+      <button id="tabInput"   class="active">入力</button>
+      <button id="tabReserve">予約</button>
+      <button id="tabProfile">プロフィール</button>
     </div>
 
-    <!-- 入力 -->
-    <div class="card" id="viewInput">
+    <!-- 入力タブ -->
+    <section id="viewInput" class="card">
       <div class="row">
         <label>患者ID（読み取り専用）</label>
-        <input id="pid" readonly />
+        <!-- ★ boot.js / app.js 互換のため id="pid" を採用 -->
+        <!-- 互換確保のため、別名IDも同時付与（旧コードが参照してもOK） -->
+        <input id="pid" name="patient_id" data-alias="patient-id profPid" readonly />
       </div>
-      <div class="row" style="margin-top:10px;">
+      <div class="row">
         <label>24h後 NRS（0〜10）</label>
-        <input id="nrs24" type="number" min="0" max="10" />
+        <input id="nrs24" type="number" min="0" max="10" inputmode="decimal" />
       </div>
       <div class="row">
         <label>48h後 NRS（0〜10）</label>
-        <input id="nrs48" type="number" min="0" max="10" />
+        <input id="nrs48" type="number" min="0" max="10" inputmode="decimal" />
       </div>
       <div class="row">
         <label>コメント（任意）</label>
-        <textarea id="memo" rows="3"></textarea>
+        <textarea id="memo"></textarea>
       </div>
-      <div style="margin-top:12px;">
-        <button id="btnSave">保存する</button>
-        <span class="muted" id="saveMsg" style="margin-left:8px;"></span>
+      <div class="row" style="justify-content:flex-start; margin-top:12px;">
+        <button id="btnSave" class="btn primary">保存する</button>
       </div>
-    </div>
+    </section>
 
-    <!-- 予約 -->
-    <div class="card" id="viewReserve" style="display:none;">
+    <!-- 予約タブ -->
+    <section id="viewReserve" class="card" style="display:none;">
       <div class="row">
         <label>予約ページ</label>
-        <button id="openReserve">予約ページを開く</button>
+        <div>
+          <button id="openReserve" class="btn">予約ページを開く</button>
+          <div class="muted" style="margin-top:8px;">※ 予約URLは院側アプリから自動連携されます。</div>
+        </div>
       </div>
-      <div class="muted" style="margin-top:8px;">※ 予約URLは院側アプリから自動連携されます。</div>
-    </div>
+    </section>
 
-    <!-- プロフィール -->
-    <div class="card" id="viewProfile" style="display:none;">
-      <div class="row"><label>患者ID</label><input id="profPid" /></div>
-      <div class="row"><label>Supabase URL</label><input id="profSUrl" /></div>
-      <div class="row"><label>Supabase ANON KEY</label><input id="profAKey" /></div>
-      <div class="row"><label>予約URL</label><input id="profRUrl" /></div>
-      <div style="margin-top:12px;display:flex;gap:8px;">
-        <button id="btnProfSave">この端末に保存</button>
-        <button id="btnReload" class="secondary">設定を再読み込み</button>
+    <!-- プロフィールタブ -->
+    <section id="viewProfile" class="card" style="display:none;">
+      <div class="row">
+        <label>患者ID</label>
+        <input id="profPid" />
       </div>
-      <div class="muted" style="margin-top:8px;">※ 値が空の場合は院側のQRから読み込んでください。</div>
-    </div>
+      <div class="row">
+        <label>Supabase URL</label>
+        <input id="profSUrl" />
+      </div>
+      <div class="row">
+        <label>Supabase ANON KEY</label>
+        <input id="profAKey" />
+      </div>
+      <div class="row">
+        <label>予約URL</label>
+        <input id="profRUrl" />
+      </div>
+      <div class="row" style="margin-top:12px; display:flex; gap:8px;">
+        <button id="btnReload" class="btn">設定を再読み込み</button>
+        <span class="muted">※ 端末の保存設定から読み込み直してください。</span>
+      </div>
+    </section>
   </div>
 
-  <!-- ❷ 本体ロジック。必ず bootstrap 後に読み込む -->
+  <!-- 本体ロジック（既存） -->
   <script src="./app.js"></script>
+  <!-- boot=1 URLからの初期化（必ず最後に読み込む） -->
   <script src="./assets/boot.js"></script>
+
+  <script>
+    // シンプルなタブ切替（既存 app.js と競合しない最小実装）
+    (function(){
+      const tabs = [
+        {btn:'tabInput',   view:'viewInput'},
+        {btn:'tabReserve', view:'viewReserve'},
+        {btn:'tabProfile', view:'viewProfile'},
+      ];
+      function show(key){
+        tabs.forEach(t=>{
+          document.getElementById(t.btn).classList.toggle('active', t.view===key);
+          document.getElementById(t.view).style.display = (t.view===key)?'':'none';
+        });
+      }
+      tabs.forEach(t=>{
+        const b = document.getElementById(t.btn);
+        if (b) b.addEventListener('click', ()=>show(t.view));
+      });
+      // 互換: data-alias に書いたIDを影で生やしておく（古いコード対策）
+      const pid = document.getElementById('pid');
+      if (pid && pid.dataset.alias) {
+        pid.dataset.alias.split(' ').forEach(a=>{
+          if (!a) return;
+          const clone = pid.cloneNode();
+          clone.id = a;
+          clone.style.display = 'none'; // DOM上に存在だけさせる
+          pid.insertAdjacentElement('afterend', clone);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
