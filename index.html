@@ -2,163 +2,24 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>患者入力フォーム</title>
-  <meta name="theme-color" content="#0f172a" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" sizes="192x192" href="./icon-192.png" />
-  <link rel="icon" sizes="512x512" href="./icon-512.png" />
+  <link rel="icon" href="./icon-192.png" />
+  <meta name="theme-color" content="#0f172a" />
   <style>
-    :root{
-      --bg:#0b1020; --card:#111a33; --text:#e6f0ff; --muted:#9fb3d9;
-      --accent:#00c2ff; --ok:#0b8f6a; --err:#c0392b;
-      --bd:rgba(255,255,255,0.08);
-    }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", "Meiryo", sans-serif;
-      line-height:1.65;
-    }
-    .wrap{ max-width:880px; margin:0 auto; padding:24px 16px 64px; }
-    h1{ margin:0 0 8px; font-size:26px; font-weight:800; }
-    .tabs{ display:flex; gap:8px; margin:8px 0 16px; }
-    .tabs button{
-      appearance:none; border:1px solid var(--bd); background:#0f1b36; color:var(--text);
-      padding:7px 12px; border-radius:10px; cursor:pointer; font-weight:700;
-    }
-    .tabs button.active{ background:var(--accent); color:#002b3a; border-color:transparent; }
-    .status{
-      font-size:12px; color:#cfe0ff; margin:8px 0 16px;
-    }
-    .card{
-      background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:16px; margin-bottom:16px;
-    }
-    .row{ display:flex; align-items:center; gap:12px; margin:10px 0; }
-    label{ width:180px; color:var(--muted); font-size:14px; }
-    input, textarea{
-      width:100%; background:#0d1730; color:var(--text); border:1px solid var(--bd);
-      border-radius:10px; padding:10px 12px; font-size:14px;
-    }
-    textarea{ min-height:120px; resize:vertical; }
-    .btn{
-      appearance:none; border:1px solid var(--bd); background:#0f1b36; color:var(--text);
-      padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700;
-    }
-    .btn.primary{ background:var(--accent); color:#002b3a; border-color:transparent; }
-    .muted{ color:var(--muted); font-size:12px; }
+    html,body{height:100%;margin:0;background:#0b1220;color:#e5e7eb;}
+    .container{max-width:920px;margin:0 auto;padding:24px;}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>患者入力フォーム</h1>
+  <div id="app" class="container"></div>
 
-    <!-- ブート状態表示（boot.js で書き換え） -->
-    <div id="boot-status" class="status">設定確認中…</div>
-
-    <!-- タブ -->
-    <div class="tabs">
-      <button id="tabInput"   class="active">入力</button>
-      <button id="tabReserve">予約</button>
-      <button id="tabProfile">プロフィール</button>
-    </div>
-
-    <!-- 入力タブ -->
-    <section id="viewInput" class="card">
-      <div class="row">
-        <label>患者ID（読み取り専用）</label>
-        <!-- ★ boot.js / app.js 互換のため id="pid" を採用 -->
-        <!-- 互換確保のため、別名IDも同時付与（旧コードが参照してもOK） -->
-        <input id="pid" name="patient_id" data-alias="patient-id profPid" readonly />
-      </div>
-      <div class="row">
-        <label>24h後 NRS（0〜10）</label>
-        <input id="nrs24" type="number" min="0" max="10" inputmode="decimal" />
-      </div>
-      <div class="row">
-        <label>48h後 NRS（0〜10）</label>
-        <input id="nrs48" type="number" min="0" max="10" inputmode="decimal" />
-      </div>
-      <div class="row">
-        <label>コメント（任意）</label>
-        <textarea id="memo"></textarea>
-      </div>
-      <div class="row" style="justify-content:flex-start; margin-top:12px;">
-        <button id="btnSave" class="btn primary">保存する</button>
-      </div>
-    </section>
-
-    <!-- 予約タブ -->
-    <section id="viewReserve" class="card" style="display:none;">
-      <div class="row">
-        <label>予約ページ</label>
-        <div>
-          <button id="openReserve" class="btn">予約ページを開く</button>
-          <div class="muted" style="margin-top:8px;">※ 予約URLは院側アプリから自動連携されます。</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- プロフィールタブ -->
-    <section id="viewProfile" class="card" style="display:none;">
-      <div class="row">
-        <label>患者ID</label>
-        <input id="profPid" />
-      </div>
-      <div class="row">
-        <label>Supabase URL</label>
-        <input id="profSUrl" />
-      </div>
-      <div class="row">
-        <label>Supabase ANON KEY</label>
-        <input id="profAKey" />
-      </div>
-      <div class="row">
-        <label>予約URL</label>
-        <input id="profRUrl" />
-      </div>
-      <div class="row" style="margin-top:12px; display:flex; gap:8px;">
-        <button id="btnReload" class="btn">設定を再読み込み</button>
-        <span class="muted">※ 端末の保存設定から読み込み直してください。</span>
-      </div>
-    </section>
-  </div>
-
-  <!-- 本体ロジック（既存） -->
+  <!-- アプリ本体 -->
   <script src="./app.js"></script>
-  <!-- boot=1 URLからの初期化（必ず最後に読み込む） -->
+  <!-- iOS / ホーム追加 / 入力無効化の恒久対策 -->
   <script src="./assets/boot.js"></script>
-
-  <script>
-    // シンプルなタブ切替（既存 app.js と競合しない最小実装）
-    (function(){
-      const tabs = [
-        {btn:'tabInput',   view:'viewInput'},
-        {btn:'tabReserve', view:'viewReserve'},
-        {btn:'tabProfile', view:'viewProfile'},
-      ];
-      function show(key){
-        tabs.forEach(t=>{
-          document.getElementById(t.btn).classList.toggle('active', t.view===key);
-          document.getElementById(t.view).style.display = (t.view===key)?'':'none';
-        });
-      }
-      tabs.forEach(t=>{
-        const b = document.getElementById(t.btn);
-        if (b) b.addEventListener('click', ()=>show(t.view));
-      });
-      // 互換: data-alias に書いたIDを影で生やしておく（古いコード対策）
-      const pid = document.getElementById('pid');
-      if (pid && pid.dataset.alias) {
-        pid.dataset.alias.split(' ').forEach(a=>{
-          if (!a) return;
-          const clone = pid.cloneNode();
-          clone.id = a;
-          clone.style.display = 'none'; // DOM上に存在だけさせる
-          pid.insertAdjacentElement('afterend', clone);
-        });
-      }
-    })();
-  </script>
 </body>
 </html>
