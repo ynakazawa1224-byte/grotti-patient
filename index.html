@@ -2,24 +2,112 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b1220" />
   <title>患者入力フォーム</title>
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" href="./icon-192.png" />
-  <meta name="theme-color" content="#0f172a" />
   <style>
-    html,body{height:100%;margin:0;background:#0b1220;color:#e5e7eb;}
-    .container{max-width:920px;margin:0 auto;padding:24px;}
+    :root { --bg:#0b1220; --panel:#111a2b; --muted:#8ea0c0; --text:#e7efff; --accent:#2f7cff; }
+    * { box-sizing: border-box; }
+    html, body { height:100%; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+           color:var(--text); background:var(--bg); }
+    .wrap { max-width:920px; margin:0 auto; padding:20px 16px 64px; }
+    h1 { margin:0 0 16px; font-size:28px; letter-spacing:.02em; }
+    .tabs { display:flex; gap:12px; margin:12px 0 20px; flex-wrap:wrap; }
+    .tab { appearance:none; border:1px solid #22314f; background:#0d1728; color:var(--text);
+           padding:10px 14px; border-radius:10px; cursor:pointer; }
+    .tab.active { background:var(--accent); border-color:var(--accent); }
+    .panel { background:var(--panel); border:1px solid #1c2943; border-radius:14px; padding:18px; }
+    .row { display:flex; flex-direction:column; gap:8px; margin:14px 0; }
+    label { color:var(--muted); font-size:13px; }
+    input, textarea, select {
+      width:100%; padding:12px 12px; border-radius:10px;
+      border:1px solid #22314f; background:#0d1728; color:var(--text);
+      font-size:16px;
+    }
+    textarea { min-height:120px; resize:vertical; }
+    .actions { display:flex; gap:10px; margin-top:14px; }
+    .btn { appearance:none; padding:12px 16px; border-radius:10px; font-weight:600;
+           border:1px solid transparent; cursor:pointer; }
+    .btn.primary { background:var(--accent); color:#fff; }
+    .btn.ghost { background:#0d1728; color:var(--text); border-color:#22314f; }
+    .hint { color:var(--muted); font-size:13px; }
+    .kbd { /* キーボード展開時の軽い余白調整（iOSでのズレ緩和） */ padding-bottom:240px; }
+    /* 小さめ画面の余白調整 */
+    @media (max-width:420px){ .wrap{padding-bottom:88px} }
   </style>
+
+  <!-- スクリプトは “必ず” この順番（boot が先 / どちらも defer） -->
+  <script src="./boot.js" defer></script>
+  <script src="./app.js" defer></script>
 </head>
 <body>
-  <div id="app" class="container"></div>
+  <div class="wrap">
+    <h1>患者入力フォーム</h1>
 
-  <!-- アプリ本体 -->
-  <script src="./app.js"></script>
-  <!-- iOS / ホーム追加 / 入力無効化の恒久対策 -->
-  <script src="./assets/boot.js"></script>
+    <div class="tabs">
+      <button class="tab active" type="button">入力</button>
+      <button class="tab" type="button" disabled>予約</button>
+      <button class="tab" type="button" disabled>プロフィール</button>
+    </div>
+
+    <!-- 入力パネル -->
+    <section class="panel" id="panel-input" aria-label="入力">
+      <div class="row">
+        <label for="pid">患者ID（読み取り専用）</label>
+        <input id="pid" inputmode="latin" autocomplete="off" placeholder="例: P0044" />
+      </div>
+
+      <div class="row">
+        <label for="nrs24">24h後 NRS（0〜10）</label>
+        <input id="nrs24" inputmode="numeric" autocomplete="off" placeholder="0〜10" />
+      </div>
+
+      <div class="row">
+        <label for="nrs48">48h後 NRS（0〜10）</label>
+        <input id="nrs48" inputmode="numeric" autocomplete="off" placeholder="0〜10" />
+      </div>
+
+      <div class="row">
+        <label for="comment">コメント（任意）</label>
+        <textarea id="comment" placeholder="自由入力"></textarea>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="saveBtn" type="button">保存する</button>
+        <button class="btn ghost" id="clearBtn" type="button">クリア</button>
+      </div>
+
+      <p class="hint">※ 予約リンク: <span id="reserveUrlHint">設定未入力</span></p>
+    </section>
+
+    <!-- プロフィール（IDのみ合わせてある。必要になれば有効化） -->
+    <section class="panel" id="panel-profile" hidden>
+      <div class="row"><label for="name">氏名</label><input id="name" /></div>
+      <div class="row"><label for="sex">性別</label><input id="sex" /></div>
+      <div class="row"><label for="birthday">生年月日</label><input id="birthday" /></div>
+      <div class="row"><label for="phone">電話</label><input id="phone" /></div>
+      <div class="row"><label for="email">Email</label><input id="email" /></div>
+    </section>
+  </div>
+
+  <script>
+    // 送信の実装は既存スクリプト側に任せる想定。
+    // ここでは存在チェック付きの軽いダミーだけ（必要なら後で本実装に差し替え）
+    document.addEventListener('DOMContentLoaded', () => {
+      const $ = (s, r=document)=>r.querySelector(s);
+      const pid = $('#pid'), n24=$('#nrs24'), n48=$('#nrs48'), c=$('#comment');
+      const save = $('#saveBtn'), clr = $('#clearBtn');
+      if (save) save.addEventListener('click', () => {
+        console.log('[demo] save clicked', { pid: pid?.value, n24: n24?.value, n48: n48?.value, c: c?.value });
+        alert('入力内容を保存する処理は既存実装に接続してください（UIは正常です）');
+      });
+      if (clr) clr.addEventListener('click', () => {
+        [n24,n48,c].forEach(el => el && (el.value = ''));
+      });
+    });
+  </script>
 </body>
 </html>
