@@ -1,119 +1,151 @@
-// app.v4.js  — 患者入力フォーム本体（キャッシュ/旧SWを強制無効化）
-// ---------------------------------------------------------------
-import { getSupabase } from './supabaseClient.js';
-import { savePatientInput } from './savePatientInput.js';
+/* v4 全書き換え版：患者フォーム本体 */
 
-// 旧 service worker を強制解除（PWA/ホーム追加後の不整合対策）
-try {
-  if ('serviceWorker' in navigator) {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    for (const r of regs) { try { await r.unregister(); } catch {} }
-    // iOS Safari はSW未対応だが、他端末での残骸対策
-  }
-} catch {}
+// ---------- ユーティリティ ----------
+const $ = (sel) => document.querySelector(sel);
+const getNum = (el) => {
+  const v = (el.value ?? '').trim();
+  if (v === '') return null;         // 未入力は null
+  const n = Number(v);
+  if (!Number.isFinite(n)) return NaN;
+  return n;
+};
 
-// ヘルパ
-const $ = s => document.querySelector(s);
-const qp = new URLSearchParams(location.search);
-const q = k => (qp.get(k) ?? '').trim();
-
-function readBoot() {
-  const b = window.__BOOT ?? {};
+// クエリ取得（pid > id 優先）
+function q(key) {
+  const u = new URL(location.href);
+  return u.searchParams.get(key);
+}
+function getPidFromQuery() {
+  return q('pid') || q('id') || '';
+}
+function getConfigFromQuery() {
   return {
-    patientId: b.id || q('id') || q('pid') || '',
-    supabaseUrl: b.supabaseUrl || q('supabaseUrl') || q('supaUrl') || '',
-    anonKey: b.anonKey || q('anonKey') || q('supaKey') || '',
-    reserveUrl: b.reserveUrl || q('reserveUrl') || '',
+    supabaseUrl: q('supabaseUrl') || q('supaUrl') || '',
+    anonKey:     q('anonKey')     || q('supaKey') || '',
+    reserveUrl:  q('reserveUrl')  || ''
   };
 }
 
-function toast(m){ alert(m); }
-function parseNrs(v){
-  if (v === '' || v == null) return null;
-  const n = Number(String(v).replace(/[^\d.-]/g,''));
-  if (Number.isNaN(n)) return null;
-  return Math.min(10, Math.max(0, n));
+// 設定（ローカル fallback）
+function loadLocalSettings() {
+  try {
+    const raw = localStorage.getItem('grotti_patient_settings_v3');
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (_) { return {}; }
 }
 
-function setReserve(url){
+// トースト
+function toast(msg) {
+  alert(msg); // シンプルに（iOSホーム追加互換）
+}
+
+// タブ切替
+function setupTabs() {
+  const btns = document.querySelectorAll('.tabbtn');
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('[data-panel]').forEach(p => {
+        p.style.display = (p.dataset.panel === tab) ? '' : 'none';
+      });
+    });
+  });
+}
+
+// ---------- Supabase ----------
+let supa = null;
+async function createSupabaseIfPossible() {
+  const viaQuery = getConfigFromQuery();
+  const viaLocal = loadLocalSettings();
+  const supabaseUrl = viaQuery.supabaseUrl || viaLocal.supabaseUrl || '';
+  const anonKey     = viaQuery.anonKey     || viaLocal.anonKey     || '';
+
+  // 予約リンクを反映
+  const reserveUrl = viaQuery.reserveUrl || viaLocal.reserveUrl || '';
   const a = $('#reserveLink'); const t = $('#reserveText');
-  if (!a || !t) return;
-  if (url){ a.href = url; a.target='_blank'; a.rel='noopener'; t.textContent = url; }
-  else { a.removeAttribute('href'); t.textContent='未設定'; }
+  if (reserveUrl) {
+    a.href = reserveUrl; t.textContent = reserveUrl;
+  } else {
+    a.removeAttribute('href'); t.textContent = '未設定';
+  }
+
+  if (!supabaseUrl || !anonKey) return null;
+
+  // ESMのため動的 import（iOS Safari 対応）
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  return createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false }
+  });
 }
 
-function setSaving(b){
-  const btn = $('#saveBtn'); if (!btn) return;
-  btn.disabled = !!b; btn.textContent = b ? '保存中…' : '保存する';
+// ---------- 保存処理 ----------
+async function handleSave() {
+  const pid = $('#pid').value.trim();
+  if (!pid) { toast('患者IDが空です（QRが正しく読み込めていません）'); return; }
+
+  const n24 = getNum($('#nrs24'));
+  const n48 = getNum($('#nrs48'));
+  const comment = $('#comment').value.trim();
+
+  // 入力検証（空はOK／入っていたら0〜10整数）
+  for (const [label, v] of [['24h NRS', n24], ['48h NRS', n48]]) {
+    if (v === null) continue;
+    if (!Number.isInteger(v) || v < 0 || v > 10) {
+      toast(`${label} は 0〜10 の整数で入力してください。`);
+      return;
+    }
+  }
+
+  if (!supa) { toast('保存先(Supabase)の設定がありません。管理側で設定URL・鍵を見直してください。'); return; }
+
+  try {
+    const payload = {
+      patient_id: pid,
+      nrs24: (n24 === null ? null : n24),
+      nrs48: (n48 === null ? null : n48),
+      comment: comment || null,
+    };
+    const { error } = await supa.from('patient_nrs').insert(payload);
+    if (error) throw error;
+
+    toast('保存しました。ありがとうございました。');
+    // 成功後クリアは好みで。ここではコメントだけ消す。
+    // $('#comment').value = '';
+  } catch (e) {
+    console.error(e);
+    toast('保存に失敗しました。通信状況と設定を確認してください。');
+  }
 }
 
-function setupTabs(){
-  const btns = document.querySelectorAll('[data-tab]');
-  const panes = document.querySelectorAll('[data-panel]');
-  const act = name=>{
-    panes.forEach(p=>p.style.display = (p.dataset.panel===name?'':'none'));
-    btns.forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-  };
-  btns.forEach(b=>b.addEventListener('click', ()=>act(b.dataset.tab)));
-  act('input');
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const boot = readBoot();
-
-  // UI初期化
-  if ($('#pid')) $('#pid').value = boot.patientId || '';
-  setReserve(boot.reserveUrl || '');
+// ---------- 初期化 ----------
+(async function bootstrap() {
   setupTabs();
 
-  let supabase = null;
-  if (boot.supabaseUrl && boot.anonKey) {
-    try { supabase = getSupabase(boot.supabaseUrl, boot.anonKey); } catch(e){ console.error(e); }
-  }
+  // 患者IDの反映＆readOnly化
+  const pid = getPidFromQuery();
+  const pidInput = $('#pid');
+  pidInput.value = pid;
+  pidInput.readOnly = true;
 
-  $('#clearBtn')?.addEventListener('click', ()=>{
-    if ($('#nrs24')) $('#nrs24').value='';
-    if ($('#nrs48')) $('#nrs48').value='';
-    if ($('#comment')) $('#comment').value='';
-    toast('入力をクリアしました。');
+  // Supabase 準備
+  supa = await createSupabaseIfPossible();
+
+  // クリア
+  $('#clearBtn').addEventListener('click', () => {
+    $('#nrs24').value = '';
+    $('#nrs48').value = '';
+    $('#comment').value = '';
   });
 
-  $('#saveBtn')?.addEventListener('click', async ()=>{
-    const pid = ($('#pid')?.value ?? '').trim();
-    const n24 = parseNrs($('#nrs24')?.value ?? '');
-    const n48 = parseNrs($('#nrs48')?.value ?? '');
-    const comment = ($('#comment')?.value ?? '').trim();
-
-    if (!pid) return toast('患者IDが空です。QRコードから開いてください。');
-    if (n24==null && n48==null && !comment) return toast('NRSまたはコメントを入力してください。');
-    if (!boot.supabaseUrl || !boot.anonKey) return toast('保存先の設定（Supabase）が不足しています。管理者へご連絡ください。');
-
-    if (!supabase){
-      try { supabase = getSupabase(boot.supabaseUrl, boot.anonKey); }
-      catch(e){ console.error(e); return toast('保存先の初期化に失敗しました。'); }
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await savePatientInput({
-        supabase,
-        patient_id: pid, nrs24: n24, nrs48: n48, comment
-      });
-      if (error){ console.error(error); toast('保存に失敗しました。通信状況をご確認ください。'); }
-      else{
-        if ($('#nrs24')) $('#nrs24').value=''; if ($('#nrs48')) $('#nrs48').value=''; if ($('#comment')) $('#comment').value='';
-        toast('保存しました。ご協力ありがとうございます。');
-      }
-    } catch(e){ console.error(e); toast('保存中にエラーが発生しました。'); }
-    finally { setSaving(false); }
+  // 保存ボタン / Enter保存
+  $('#saveBtn').addEventListener('click', handleSave);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSave();
   });
 
-  // Enterでも保存
-  document.addEventListener('keydown', e=>{
-    if (e.key==='Enter' && !e.isComposing){
-      if (document.activeElement && ['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
-        e.preventDefault(); $('#saveBtn')?.click();
-      }
-    }
-  });
-});
+  // 見た目だけロード完了感
+  console.log('[patient] ready');
+})();
