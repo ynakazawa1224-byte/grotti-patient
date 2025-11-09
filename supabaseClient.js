@@ -1,9 +1,13 @@
-// supabaseClient.js
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+// supabaseClient.js v4
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
-export function getSupabase() {
-  const url = localStorage.getItem("gp.supabaseUrl");
-  const key = localStorage.getItem("gp.anonKey");
-  if (!url || !key) throw new Error("Supabase設定が見つかりません。設定画面でURLとKeyを保存してください。");
-  return createClient(url, key);
+export function getSupabase(url, anonKey) {
+  if (!url || !anonKey) throw new Error('Supabase URL / anonKey missing');
+  // 既存インスタンスがあれば再利用
+  if (!window.__SB) window.__SB = {};
+  const key = `${url}::${anonKey}`;
+  if (!window.__SB[key]) window.__SB[key] = createClient(url, anonKey, {
+    auth: { persistSession: false }
+  });
+  return window.__SB[key];
 }
