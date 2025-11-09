@@ -2,112 +2,102 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>患者入力フォーム</title>
+
+  <!-- ビューポート / ズーム / レイアウト -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+
+  <!-- iOS Add to Home 対策（PWAは無効化方針：SWは登録しない） -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#0b1220" />
-  <title>患者入力フォーム</title>
-  <style>
-    :root { --bg:#0b1220; --panel:#111a2b; --muted:#8ea0c0; --text:#e7efff; --accent:#2f7cff; }
-    * { box-sizing: border-box; }
-    html, body { height:100%; }
-    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-           color:var(--text); background:var(--bg); }
-    .wrap { max-width:920px; margin:0 auto; padding:20px 16px 64px; }
-    h1 { margin:0 0 16px; font-size:28px; letter-spacing:.02em; }
-    .tabs { display:flex; gap:12px; margin:12px 0 20px; flex-wrap:wrap; }
-    .tab { appearance:none; border:1px solid #22314f; background:#0d1728; color:var(--text);
-           padding:10px 14px; border-radius:10px; cursor:pointer; }
-    .tab.active { background:var(--accent); border-color:var(--accent); }
-    .panel { background:var(--panel); border:1px solid #1c2943; border-radius:14px; padding:18px; }
-    .row { display:flex; flex-direction:column; gap:8px; margin:14px 0; }
-    label { color:var(--muted); font-size:13px; }
-    input, textarea, select {
-      width:100%; padding:12px 12px; border-radius:10px;
-      border:1px solid #22314f; background:#0d1728; color:var(--text);
-      font-size:16px;
-    }
-    textarea { min-height:120px; resize:vertical; }
-    .actions { display:flex; gap:10px; margin-top:14px; }
-    .btn { appearance:none; padding:12px 16px; border-radius:10px; font-weight:600;
-           border:1px solid transparent; cursor:pointer; }
-    .btn.primary { background:var(--accent); color:#fff; }
-    .btn.ghost { background:#0d1728; color:var(--text); border-color:#22314f; }
-    .hint { color:var(--muted); font-size:13px; }
-    .kbd { /* キーボード展開時の軽い余白調整（iOSでのズレ緩和） */ padding-bottom:240px; }
-    /* 小さめ画面の余白調整 */
-    @media (max-width:420px){ .wrap{padding-bottom:88px} }
-  </style>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="format-detection" content="telephone=no,email=no,address=no" />
 
-  <!-- スクリプトは “必ず” この順番（boot が先 / どちらも defer） -->
-  <script src="./boot.js" defer></script>
-  <script src="./app.js" defer></script>
+  <!-- 余計な SW を読み込まない（過去に置いた sw.js があっても無視） -->
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin:0; padding:0; background:#0b1220; color:#eaf1ff; font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,sans-serif; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: clamp(20px, 4vw, 28px); letter-spacing: .06em; margin: 8px 0 24px; }
+    .tabs { display:flex; gap:12px; margin-bottom: 16px; }
+    .tabbtn { padding: 10px 16px; border-radius: 10px; background:#121a2e; border:1px solid #223154; cursor:pointer; user-select:none; }
+    .tabbtn.active { background:#1a2542; border-color:#3c5ba7; }
+    .card { background:#0f1730; border:1px solid #223154; border-radius: 16px; padding: 18px; }
+    .row { margin: 14px 0; }
+    .label { display:block; font-size:14px; opacity:.9; margin-bottom: 6px; }
+    input[type=text], input[type=number], textarea {
+      width: 100%; box-sizing: border-box; padding: 12px 14px;
+      background:#0b1328; color:#eaf1ff; border:1px solid #27365f; border-radius: 12px;
+      outline: none;
+    }
+    input::placeholder, textarea::placeholder { color:#8aa0d0; opacity:.7; }
+    .actions { display:flex; gap:12px; margin-top: 16px; }
+    .btn {
+      padding: 12px 18px; border-radius: 12px; border:1px solid #35529c; background:#1b2a52;
+      color:#eaf1ff; cursor:pointer; min-width: 120px; text-align:center;
+    }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .note { font-size: 12px; opacity:.8; margin-top: 10px; }
+    a { color:#8fb4ff; }
+  </style>
 </head>
 <body>
   <div class="wrap">
     <h1>患者入力フォーム</h1>
 
+    <!-- タブ -->
     <div class="tabs">
-      <button class="tab active" type="button">入力</button>
-      <button class="tab" type="button" disabled>予約</button>
-      <button class="tab" type="button" disabled>プロフィール</button>
+      <div class="tabbtn active" data-tab="input">入力</div>
+      <div class="tabbtn" data-tab="reserve">予約</div>
+      <div class="tabbtn" data-tab="profile">プロフィール</div>
     </div>
 
     <!-- 入力パネル -->
-    <section class="panel" id="panel-input" aria-label="入力">
+    <section class="card" data-panel="input">
       <div class="row">
-        <label for="pid">患者ID（読み取り専用）</label>
-        <input id="pid" inputmode="latin" autocomplete="off" placeholder="例: P0044" />
+        <label class="label">患者ID（読み取り専用）</label>
+        <input id="pid" type="text" inputmode="latin" autocomplete="off" placeholder="（QRから自動入力）" />
       </div>
-
       <div class="row">
-        <label for="nrs24">24h後 NRS（0〜10）</label>
-        <input id="nrs24" inputmode="numeric" autocomplete="off" placeholder="0〜10" />
+        <label class="label">24h後 NRS（0〜10）</label>
+        <input id="nrs24" type="number" step="1" min="0" max="10" placeholder="例: 5" />
       </div>
-
       <div class="row">
-        <label for="nrs48">48h後 NRS（0〜10）</label>
-        <input id="nrs48" inputmode="numeric" autocomplete="off" placeholder="0〜10" />
+        <label class="label">48h後 NRS（0〜10）</label>
+        <input id="nrs48" type="number" step="1" min="0" max="10" placeholder="例: 3" />
       </div>
-
       <div class="row">
-        <label for="comment">コメント（任意）</label>
-        <textarea id="comment" placeholder="自由入力"></textarea>
+        <label class="label">コメント（任意）</label>
+        <textarea id="comment" rows="4" placeholder="症状の変化や感想をご記入ください"></textarea>
       </div>
 
       <div class="actions">
-        <button class="btn primary" id="saveBtn" type="button">保存する</button>
-        <button class="btn ghost" id="clearBtn" type="button">クリア</button>
+        <button id="saveBtn" class="btn">保存する</button>
+        <button id="clearBtn" class="btn" type="button">クリア</button>
       </div>
 
-      <p class="hint">※ 予約リンク: <span id="reserveUrlHint">設定未入力</span></p>
+      <div class="note">※ Enter キーでも保存できます。</div>
     </section>
 
-    <!-- プロフィール（IDのみ合わせてある。必要になれば有効化） -->
-    <section class="panel" id="panel-profile" hidden>
-      <div class="row"><label for="name">氏名</label><input id="name" /></div>
-      <div class="row"><label for="sex">性別</label><input id="sex" /></div>
-      <div class="row"><label for="birthday">生年月日</label><input id="birthday" /></div>
-      <div class="row"><label for="phone">電話</label><input id="phone" /></div>
-      <div class="row"><label for="email">Email</label><input id="email" /></div>
+    <!-- 予約パネル -->
+    <section class="card" data-panel="reserve" style="display:none">
+      <div class="row">
+        <div class="label">予約リンク</div>
+        <a id="reserveLink" href="#" target="_blank" rel="noopener"><span id="reserveText">未設定</span></a>
+      </div>
+      <div class="note">管理側（PoC設定→予約URL）で設定されたリンクがここに表示されます。</div>
+    </section>
+
+    <!-- プロフィール（表示のみのプレースホルダ） -->
+    <section class="card" data-panel="profile" style="display:none">
+      <div class="row"><div class="label">このタブは将来の拡張用です（氏名・電話などを表示予定）。</div></div>
     </section>
   </div>
 
-  <script>
-    // 送信の実装は既存スクリプト側に任せる想定。
-    // ここでは存在チェック付きの軽いダミーだけ（必要なら後で本実装に差し替え）
-    document.addEventListener('DOMContentLoaded', () => {
-      const $ = (s, r=document)=>r.querySelector(s);
-      const pid = $('#pid'), n24=$('#nrs24'), n48=$('#nrs48'), c=$('#comment');
-      const save = $('#saveBtn'), clr = $('#clearBtn');
-      if (save) save.addEventListener('click', () => {
-        console.log('[demo] save clicked', { pid: pid?.value, n24: n24?.value, n48: n48?.value, c: c?.value });
-        alert('入力内容を保存する処理は既存実装に接続してください（UIは正常です）');
-      });
-      if (clr) clr.addEventListener('click', () => {
-        [n24,n48,c].forEach(el => el && (el.value = ''));
-      });
-    });
-  </script>
+  <!-- アプリ本体（v=4 でキャッシュ破壊。以後変更時は v=5 などに上げます） -->
+  <script type="module" src="./app.v4.js?v=4"></script>
 </body>
 </html>
